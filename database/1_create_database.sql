@@ -1,0 +1,5 @@
+IF DB_ID('ReserveNServe') IS NULL
+BEGIN
+    CREATE DATABASE ReserveNServe;
+END
+GO
