@@ -82,16 +82,15 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* @layer base {
+@layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply font-sans bg-background text-foreground
-  }
-} */
 
-@layer base {
+  body {
+    @apply bg-background text-foreground
+  }
+
   h1 {
     @apply font-serif text-5xl md:text-6xl font-medium leading-tight tracking-tight;
   }
