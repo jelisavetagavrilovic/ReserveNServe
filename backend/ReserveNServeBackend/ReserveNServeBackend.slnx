@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/Services/" />
+  <Folder Name="/Services/Restaurants/">
+    <Project Path="Restaurants.API/Restaurants.API.csproj" Id="12011a1f-0bac-4526-a3e7-ae87963e6926" />
   <Folder Name="/Services/Reservations/">
     <Project Path="Services/Reservations/Reservations.API/Reservations.API.csproj" />
   </Folder>
