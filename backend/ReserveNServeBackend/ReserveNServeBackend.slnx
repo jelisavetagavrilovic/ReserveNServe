@@ -1,1 +1,5 @@
-<Solution />
+<Solution>
+  <Folder Name="/Services/">
+    <Project Path="Identity.API/Identity.API.csproj" Id="6e22f452-2ea5-4b2b-822e-c03ea9084220" />
+  </Folder>
+</Solution>
