@@ -15,3 +15,33 @@ export interface Restaurant {
   reservation_duration: string // "HH:MM:SS" format
   image?: string
 }
+
+export interface Table {
+  id: number
+  restaurantId: number
+  location: string
+  seats: number
+  available_number: number
+}
+
+export interface MenuItem {
+  id: number
+  restaurant_id: number
+  food_name: string
+  description: string
+  price: number
+  image?: string // može biti URL ili Base64 string za sada
+  category: string
+}
+
+export interface CartItem extends MenuItem {
+  quantity: number
+  specialInstructions?: string
+}
+
+export interface PreOrder {
+  menuItemId: string
+  quantity: number
+}
+
+
