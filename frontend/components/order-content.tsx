@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ShoppingCart, Trash2, Plus, Minus, ChevronRight } from "lucide-react"
 import { useAppStore } from "@/lib/store"
 
-export function YourOrder() {
+interface YourOrderProps {
+  onProceed: () => void
+}
+
+export function YourOrder({ onProceed }: YourOrderProps): React.ReactElement {
   const { cart, updateCartItemQuantity, clearCart, getCartTotal } = useAppStore()
   const cartTotal = getCartTotal()
-
-  const handleProceedToCheckout = () => {
-  }
-
+  
   return (
     <Card>
       <CardHeader className="pb-0">
@@ -60,10 +61,10 @@ export function YourOrder() {
             </div>
           </div>
         )}
-        <Button className="w-full mt-4" size="lg" onClick={handleProceedToCheckout}>
-                     {cart.length > 0 ? "Proceed to Payment" : "Book Without Pre-order"}
-                     <ChevronRight className="h-4 w-4 ml-2" />
-                   </Button>
+        <Button className="w-full mt-4" size="lg" onClick={onProceed}>
+          {cart.length > 0 ? "Proceed to Payment" : "Book Without Pre-order"}
+          <ChevronRight className="h-4 w-4 ml-2" />
+        </Button>
       </CardContent>
     </Card>
   )

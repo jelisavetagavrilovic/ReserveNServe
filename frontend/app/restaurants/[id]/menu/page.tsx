@@ -8,6 +8,7 @@ import { YourOrder } from "@/components/order-content"
 import { mockRestaurants, mockTables, mockMenuItems } from "@/lib/mock-data"
 import { Button } from "@/components/ui/button"
 import { format, parse } from "date-fns"
+import { Reservation } from "@/lib/types"
 import { Clock, CalendarDays, MapPin, Users, ArrowLeft, Armchair } from "lucide-react"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"
@@ -18,14 +19,17 @@ export default function MenuPage() {
   const router = useRouter()
   const id = Number(params.id)
 
+  const user = {id: 1, name: "John", surname: "Doe", email: "john.doe@example.com", phone: "+1234567890"}
   const restaurant = mockRestaurants.find(r => r.id === id)
   const tableId = Number(searchParams.get("tableId"))
   const reservationDate = searchParams.get("date")
   const reservationTime = searchParams.get("time")
-  const partySize = searchParams.get("partySize")
-  const table = mockTables[tableId]
+  const partySize = Number(searchParams.get("partySize"))
 
+  const table = mockTables[tableId]
   const menuItems = mockMenuItems.filter(item => item.restaurant_id === id)
+
+  const { addReservation, setSelectedTable } = useAppStore()
 
   const [servingTime, setServingTime] = useState("")
 
@@ -68,8 +72,51 @@ export default function MenuPage() {
 
   const servingTimes = generateServingTimes()
 
-  const { cart, addToCart, updateCartItemQuantity, clearCart, getCartTotal } = useAppStore()
-  const cartTotal = getCartTotal()
+  const { cart, clearCart, getCartTotal, setCurrentReservation } = useAppStore()
+
+  const handleProceedToCheckout = () => {
+    const finalServingTime = servingTime || reservationTime;
+
+    const reservationData: Partial<Reservation> = {
+      userId: user.id,
+      restaurantId: restaurant.id,
+      tableId: tableId,
+      date: reservationDate!,
+      time: reservationTime!,
+      partySize: partySize || 2,
+      preOrders: cart.map(item => ({
+        menuItemId: item.id,
+        food_name: item.food_name,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+      servingTime: cart.length > 0 ? finalServingTime : null,
+      totalAmount: getCartTotal(),
+      status: "pending",
+    };
+
+    // save partial reservation in store
+    setCurrentReservation(reservationData);
+
+    if (cart.length === 0) {
+      // todo: replace with real API call, we should get back a reservation ID and status for confirmed reservation
+      // simulate backend request
+      const reservation: Reservation = {
+        ...reservationData,
+        id: Math.floor(Math.random() * 1000000), 
+        status: "confirmed",
+      } as Reservation;
+
+      addReservation(reservation);
+      setSelectedTable(null);
+      clearCart();
+      router.push(`/confirmation?reservationId=${reservation.id}`);
+    } else {
+      // proceed to checkout
+      router.push(`/checkout`);
+    }
+  };
+
 
   return (
     <Suspense
@@ -152,7 +199,7 @@ export default function MenuPage() {
               </Card>    
 
               {/* Your Order */}  
-              <YourOrder />          
+              <YourOrder onProceed={handleProceedToCheckout} />    
             </div>
           </div>
         </div>

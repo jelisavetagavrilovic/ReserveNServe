@@ -1,3 +1,11 @@
+
+export interface User {
+  id: number
+  name: string
+  surname: string
+  email: string
+  phone?: string
+}
 export interface Restaurant {
   id: number
   name: string
@@ -30,18 +38,36 @@ export interface MenuItem {
   food_name: string
   description: string
   price: number
-  image?: string // može biti URL ili Base64 string za sada
+  image?: string 
   category: string
 }
 
 export interface CartItem extends MenuItem {
   quantity: number
-  specialInstructions?: string
 }
 
-export interface PreOrder {
-  menuItemId: string
-  quantity: number
+export interface PreOrderItem {
+  menuItemId: number      
+  food_name: string       
+  price: number           
+  quantity: number 
 }
 
+export type ReservationStatus =
+  | "pending"
+  | "confirmed"
+  | "cancelled"
 
+export interface Reservation {
+  id?: number
+  userId: number
+  restaurantId: number
+  tableId: number
+  date: string       // "2026-01-28"
+  time: string       // "19:30"
+  partySize: number
+  preOrders: PreOrderItem[]
+  servingTime?: string | null
+  totalAmount: number
+  status: ReservationStatus
+}
