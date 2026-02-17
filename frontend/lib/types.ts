@@ -57,6 +57,8 @@ export type ReservationStatus =
   | "pending"
   | "confirmed"
   | "cancelled"
+  | "failed"
+  | "draft"
 
 export interface Reservation {
   id?: number

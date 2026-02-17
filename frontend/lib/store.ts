@@ -2,9 +2,14 @@
 
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import type { CartItem, Reservation, Table } from "./types"
+import type { User, CartItem, Reservation, Table } from "./types"
 
 interface AppState {
+  // user
+  user: User | null
+  setUser: (user: User) => void
+  logout: () => void
+
   // table
   selectedTable: Table | null
   setSelectedTable: (table: Table | null) => void
@@ -18,18 +23,23 @@ interface AppState {
   getCartTotal: () => number
 
   // reservation
-  currentReservation: Partial<Reservation> | null
-  setCurrentReservation: (reservation: Partial<Reservation> | null) => void
+  currentReservation: Reservation | null
+  setCurrentReservation: (reservation: Reservation | null) => void
   updateCurrentReservation: (updates: Partial<Reservation>) => void
-  // todo: replace with API call 
-  reservations: Reservation[]
-  addReservation: (reservation: Reservation) => void
-  cancelReservation: (id: number) => void
+  // todo: replace with API call - don't need me
+  // reservations: Reservation[]
+  // addReservation: (reservation: Reservation) => void
+  // cancelReservation: (id: number) => void
 }
 
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
+      // user
+      user: null,
+      setUser: (user) => set({ user: user }),
+      logout: () => set({ user: null }),
+
       // table
       selectedTable: null,
       setSelectedTable: (table) => set({ selectedTable: table }),
@@ -76,6 +86,7 @@ export const useAppStore = create<AppState>()(
         set({ currentReservation: reservation }),
       updateCurrentReservation: (updates) => {
         const { currentReservation } = get()
+        if (!currentReservation) return
         set({ 
           currentReservation: { 
             ...currentReservation, 
@@ -83,24 +94,25 @@ export const useAppStore = create<AppState>()(
           } 
         })
       },
-      reservations: [],
-      addReservation: (reservation) => {
-        set((state) => ({
-          reservations: [...state.reservations, reservation],
-        }))
-      },
-      cancelReservation: (id) => {
-        set((state) => ({
-          reservations: state.reservations.map((r) => (r.id === id ? { ...r, status: "cancelled" as const } : r)),
-        }))
-      },
+      // reservations: [],
+      // addReservation: (reservation) => {
+      //   set((state) => ({
+      //     reservations: [...state.reservations, reservation],
+      //   }))
+      // },
+      // cancelReservation: (id) => {
+      //   set((state) => ({
+      //     reservations: state.reservations.map((r) => (r.id === id ? { ...r, status: "cancelled" as const } : r)),
+      //   }))
+      // },
     }),
     {
       name: "restaurant-app-storage",
       partialize: (state) => ({
+        user: state.user,
         cart: state.cart,
         selectedTable: state.selectedTable,
-        reservations: state.reservations, // tmp
+        // reservations: state.reservations, // tmp
         currentReservation: state.currentReservation,
       }),
       // refresh

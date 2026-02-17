@@ -3,19 +3,11 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAppStore } from "@/lib/store"
-import { mockRestaurants } from "@/lib/mock-data"
-
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card"
+import { processPayment } from "@/lib/services/reservation.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import {
   CreditCard,
   Loader2,
@@ -23,14 +15,12 @@ import {
   CheckCircle2,
 } from "lucide-react"
 
-import type { Reservation } from "@/lib/types"
-
 export function Payment() {
   const router = useRouter()
   const {
     currentReservation,
     updateCurrentReservation,
-    addReservation,
+    // addReservation,
   } = useAppStore()
 
   const [isProcessing, setIsProcessing] = useState(false)
@@ -76,32 +66,22 @@ export function Payment() {
     setCardDetails(prev => ({ ...prev, [name]: value }))
   }
 
-  // todo: integrate with real payment gateway
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!cardDetails.number || !cardDetails.expiry || !cardDetails.cvc || !cardDetails.name) return
+    if (!currentReservation?.id) return
 
     setIsProcessing(true)
 
     try {
-      // todo: replace with real API call, we should get back a reservation ID and status for confirmed reservation
-      const response = await new Promise<Reservation>((resolve) =>
-        setTimeout(() => {
-          resolve({
-            ...currentReservation,
-            id: Math.floor(Math.random() * 1000000), 
-            status: "confirmed",
-          } as Reservation)
-        }, 2000)
-      )
+      const updatedReservation = await processPayment(currentReservation.id)
+      if (!updatedReservation) throw new Error("Reservation not found")
 
-      // update store
-      updateCurrentReservation(response)
+      updateCurrentReservation(updatedReservation)
 
-      // todo: delete when we have a backend
-      addReservation(response)
-
-      router.push(`/confirmation?reservationId=${response.id}`)
+      router.push(`/confirmation?reservationId=${updatedReservation.id}`)
+    } catch (error) {
+      console.error("Payment failed:", error)
     } finally {
       setIsProcessing(false)
     }
@@ -187,7 +167,7 @@ export function Payment() {
               </CardContent>
             </Card>
 
-            <Button type="submit" size="lg" className="w-full" disabled={isProcessing}>
+            <Button type="submit" size="lg" className="w-full" disabled={!cardDetails.name || !cardDetails.number || !cardDetails.expiry || !cardDetails.cvc || isProcessing}>
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

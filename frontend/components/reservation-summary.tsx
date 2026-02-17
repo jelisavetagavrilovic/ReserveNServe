@@ -2,9 +2,10 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { useAppStore } from "@/lib/store"
-import { mockRestaurants, mockTables } from "@/lib/mock-data"
-import type { Reservation } from "@/lib/types"
+import type { Reservation, Restaurant, Table } from "@/lib/types"
+import { format, parse } from "date-fns"
+import { getRestaurantById, getTableById } from "@/lib/services/restaurant.service"
+import { useEffect, useState } from "react"
 
 import {
   MapPin,
@@ -20,18 +21,29 @@ import {
   Home,
 } from "lucide-react"
 
-import { format, parse } from "date-fns"
-import { Button } from "./ui/button"
-
 type Props = {
   reservation: Partial<Reservation>
   mode: "checkout" | "confirmation"
 }
 
 export function ReservationSummary({ reservation, mode }: Props) {
-  // todo: fetch restaurant and table from api or store
-  const restaurant = mockRestaurants.find(r => r.id === reservation.restaurantId);
-  const table = mockTables.find(t => t.id === reservation.tableId);
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
+  const [table, setTable] = useState<Table | null>(null)
+
+  useEffect(() => {
+    const init = async () => {
+      if (reservation.restaurantId) {
+        const r = await getRestaurantById(reservation.restaurantId)
+        setRestaurant(r ?? null)
+      }
+
+      if (reservation.tableId) {
+        const t = await getTableById(reservation.tableId)
+        setTable(t ?? null)
+      }
+    }
+    init()
+  }, [reservation.restaurantId, reservation.tableId])
 
   return (
     <div className="lg:sticky lg:top-24h-fit">
