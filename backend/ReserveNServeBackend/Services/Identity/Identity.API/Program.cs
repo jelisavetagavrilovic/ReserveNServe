@@ -86,7 +86,7 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
-builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<TokenService>();
 
 var app = builder.Build();
 
@@ -96,7 +96,7 @@ using (var scope = app.Services.CreateScope())
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
     // 1) Ensure roles exist
-    string[] roles = ["User", "Admin"];
+    string[] roles = ["User", "Admin", "RestaurantOwner"];
     foreach (var role in roles)
     {
         if (!await roleManager.RoleExistsAsync(role))

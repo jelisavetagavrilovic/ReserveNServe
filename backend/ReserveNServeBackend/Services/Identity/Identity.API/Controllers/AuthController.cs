@@ -1,11 +1,11 @@
 ﻿using Identity.API.Data;
 using Identity.API.DTOs;
 using Identity.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace Identity.API.Controllers;
 
@@ -15,16 +15,16 @@ public class AuthController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
-    private readonly JwtTokenService _jwt;
+    private readonly TokenService _tokens;
 
     public AuthController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
-        JwtTokenService jwt)
+        TokenService tokens)
     {
         _userManager = userManager;
         _signInManager = signInManager;
-        _jwt = jwt;
+        _tokens = tokens;
     }
 
     [HttpPost("register")]
@@ -46,8 +46,8 @@ public class AuthController : ControllerBase
 
         await _userManager.AddToRoleAsync(user, "User");
 
-        var (token, expires) = await _jwt.CreateAccessTokenAsync(user);
-        return Ok(new AuthResponse(token, expires));
+        var auth = await _tokens.CreateAuthResponseAsync(user);
+        return Ok(new AuthResponse(auth.accessToken, auth.expiresAtUtc, auth.refreshToken));
     }
 
     [HttpPost("login")]
@@ -61,9 +61,26 @@ public class AuthController : ControllerBase
         if (!result.Succeeded)
             return Unauthorized("Invalid credentials.");
 
-        var (token, expires) = await _jwt.CreateAccessTokenAsync(user);
+        var auth = await _tokens.CreateAuthResponseAsync(user);
+        return Ok(new AuthResponse(auth.accessToken, auth.expiresAtUtc, auth.refreshToken));
+    }
 
-        return Ok(new AuthResponse(token, expires));
+    [HttpPost("refresh")]
+    public async Task<ActionResult<AuthResponse>> Refresh(RefreshRequest request)
+    {
+        var auth = await _tokens.RefreshAsync(request.RefreshToken);
+        if (auth == null)
+            return Unauthorized("Invalid refresh token.");
+
+        return Ok(new AuthResponse(auth.Value.accessToken, auth.Value.expiresAtUtc, auth.Value.refreshToken));
+    }
+
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(LogoutRequest request)
+    {
+        var ok = await _tokens.RevokeRefreshTokenAsync(request.RefreshToken);
+        return ok ? Accepted() : NotFound();
     }
 
     [Authorize]
@@ -77,12 +94,5 @@ public class AuthController : ControllerBase
             Email = User.FindFirstValue(ClaimTypes.Email),
             Claims = User.Claims.Select(c => new { c.Type, c.Value })
         });
-    }
-
-    [Authorize(Roles = "Admin")]
-    [HttpGet("admin/ping")]
-    public IActionResult AdminPing()
-    {
-        return Ok(new { ok = true, message = "You are Admin ✅" });
     }
 }
