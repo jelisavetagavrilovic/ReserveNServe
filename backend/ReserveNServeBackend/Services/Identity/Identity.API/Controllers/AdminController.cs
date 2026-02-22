@@ -7,7 +7,7 @@ namespace Identity.API.Controllers;
 [Route("api/admin")]
 public class AdminController : ControllerBase
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "AdminOnly")]
     [HttpGet("ping")]
     public IActionResult Ping()
     {

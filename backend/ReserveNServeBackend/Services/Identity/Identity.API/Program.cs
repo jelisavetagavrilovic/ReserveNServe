@@ -85,7 +85,12 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
+    options.AddPolicy("OwnerOnly", p => p.RequireRole("RestaurantOwner"));
+    options.AddPolicy("AdminOrOwner", p => p.RequireRole("Admin", "RestaurantOwner"));
+});
 builder.Services.AddScoped<TokenService>();
 
 var app = builder.Build();

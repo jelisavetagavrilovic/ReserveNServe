@@ -47,7 +47,7 @@ public class OwnerRequestsController : ControllerBase
         return Accepted(new { message = "Owner request submitted." });
     }
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "AdminOnly")]
     [HttpGet("requests")]
     public async Task<IActionResult> GetPendingOwnerRequests()
     {
@@ -59,7 +59,7 @@ public class OwnerRequestsController : ControllerBase
         return Ok(pending);
     }
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "AdminOnly")]
     [HttpPost("requests/approve")]
     public async Task<IActionResult> ApproveRestaurantOwner(ApproveOwnerRequest request)
     {
@@ -84,7 +84,7 @@ public class OwnerRequestsController : ControllerBase
     }
 
     // Optional: owner-only test endpoint
-    [Authorize(Roles = "RestaurantOwner")]
+    [Authorize(Policy = "OwnerOnly")]
     [HttpGet("ping")]
     public IActionResult OwnerPing()
     {
