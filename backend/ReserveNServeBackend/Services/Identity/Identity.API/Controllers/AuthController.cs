@@ -1,12 +1,13 @@
 ﻿using Identity.API.Data;
 using Identity.API.DTOs;
+using Identity.API.DTOs.Auth;
 using Identity.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using Microsoft.AspNetCore.RateLimiting;
 
 namespace Identity.API.Controllers;
 
@@ -30,7 +31,7 @@ public class AuthController : ControllerBase
 
     [EnableRateLimiting("register")]
     [HttpPost("register")]
-    public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
+    public async Task<IActionResult> Register(RegisterRequest request)
     {
         var existing = await _userManager.FindByEmailAsync(request.Email);
         if (existing != null)
@@ -66,8 +67,14 @@ public class AuthController : ControllerBase
                 errors = addRole.Errors.Select(e => new { e.Code, e.Description })
             });
         }
-        var auth = await _tokens.CreateAuthResponseAsync(user);
-        return Ok(new AuthResponse(auth.accessToken, auth.expiresAtUtc, auth.refreshToken));
+
+        var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+        return Ok(new
+        {
+            message = "Registration successful. Please confirm email before login.",
+            dev = new { userId = user.Id, token }
+        });
     }
 
     [EnableRateLimiting("login")]
@@ -77,6 +84,8 @@ public class AuthController : ControllerBase
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user == null)
             return Unauthorized(new { message = "Invalid credentials." });
+        if (!user.EmailConfirmed)
+            return Unauthorized(new { message = "Email is not confirmed." });
 
         var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
         if (result.IsLockedOut)
@@ -143,5 +152,75 @@ public class AuthController : ControllerBase
             message = "Logged out from all sessions.",
             revokedTokens = count
         });
+    }
+
+    [HttpPost("confirm-email")]
+    public async Task<IActionResult> ConfirmEmail(ConfirmEmailRequest request)
+    {
+        var user = await _userManager.FindByIdAsync(request.UserId);
+        if (user == null)
+            return NotFound(new { message = "User not found." });
+
+        var result = await _userManager.ConfirmEmailAsync(user, request.Token);
+        if (!result.Succeeded)
+        {
+            return BadRequest(new
+            {
+                message = "Email confirmation failed.",
+                errors = result.Errors.Select(e => new { e.Code, e.Description })
+            });
+        }
+
+        return Ok(new { message = "Email confirmed successfully." });
+    }
+
+    [EnableRateLimiting("login")] 
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email);
+
+        if (user == null)
+            return Ok(new { message = "If the email exists, a reset link was generated." });
+
+        if (!user.EmailConfirmed)
+            return Ok(new { message = "If the email exists, a reset link was generated." });
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+        // DEV: return link so you can test in Swagger
+        // In prod: send via email
+        var link = new
+        {
+            userId = user.Id,
+            token
+        };
+
+        return Ok(new
+        {
+            message = "If the email exists, a reset link was generated.",
+            dev = link
+        });
+    }
+
+    [EnableRateLimiting("login")] // reuse policy or make "reset" policy
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequest request)
+    {
+        var user = await _userManager.FindByIdAsync(request.UserId);
+        if (user == null)
+            return NotFound(new { message = "User not found." });
+
+        var result = await _userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            return BadRequest(new
+            {
+                message = "Password reset failed.",
+                errors = result.Errors.Select(e => new { e.Code, e.Description })
+            });
+        }
+
+        return Ok(new { message = "Password has been reset." });
     }
 }
