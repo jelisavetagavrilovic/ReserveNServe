@@ -15,7 +15,11 @@ public class TokenService
     private readonly IConfiguration _config;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly AppIdentityDbContext _db;
-
+    private static string HashToken(string token)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        return Convert.ToHexString(bytes).ToLowerInvariant(); // 64-char hex
+    }
     public TokenService(IConfiguration config, UserManager<ApplicationUser> userManager, AppIdentityDbContext db)
     {
         _config = config;
@@ -59,20 +63,20 @@ public class TokenService
         return (new JwtSecurityTokenHandler().WriteToken(token), expires);
     }
 
-    public async Task<RefreshToken> CreateRefreshTokenAsync(ApplicationUser user)
+    public async Task<(RefreshToken entity, string plainToken)> CreateRefreshTokenAsync(ApplicationUser user)
     {
         var days = _config.GetValue<int>("RefreshToken:ExpirationDays");
         if (days <= 0) days = 14;
 
         // secure random token (base64url-ish)
         var bytes = RandomNumberGenerator.GetBytes(32);
-        var tokenString = Convert.ToBase64String(bytes)
+        var plain = Convert.ToBase64String(bytes)
             .Replace("+", "-").Replace("/", "_").Replace("=", "");
 
         var rt = new RefreshToken
         {
             UserId = user.Id,
-            Token = tokenString,
+            TokenHash = HashToken(plain),   //store hash, not plaintext
             CreatedAtUtc = DateTime.UtcNow,
             ExpiresAtUtc = DateTime.UtcNow.AddDays(days)
         };
@@ -80,25 +84,33 @@ public class TokenService
         _db.RefreshTokens.Add(rt);
         await _db.SaveChangesAsync();
 
-        return rt;
+        return (rt, plain);
     }
 
     public async Task<(string accessToken, DateTime expiresAtUtc, string refreshToken)> CreateAuthResponseAsync(ApplicationUser user)
     {
         var (access, exp) = await CreateAccessTokenAsync(user);
-        var refresh = await CreateRefreshTokenAsync(user);
-        return (access, exp, refresh.Token);
+        var (_, plainRefresh) = await CreateRefreshTokenAsync(user);
+        return (access, exp, plainRefresh);
     }
 
     public async Task<(string accessToken, DateTime expiresAtUtc, string refreshToken)?> RefreshAsync(string refreshToken)
     {
+        var hash = HashToken(refreshToken);
+
         var token = await _db.RefreshTokens
             .Include(t => t.User)
-            .SingleOrDefaultAsync(t => t.Token == refreshToken);
+            .SingleOrDefaultAsync(t => t.TokenHash == hash);
 
         if (token == null) return null;
-        if (token.IsRevoked || token.IsExpired) return null;
+        if (token.IsRevoked)
+        {
+            // revoke ALL tokens for that user (account protection)
+            await RevokeAllRefreshTokensForUserAsync(token.UserId);
+            return null;
+        }
 
+        if (token.IsExpired) return null;
         // rotate: revoke old token, issue a new one
         token.RevokedAtUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync();
@@ -108,7 +120,8 @@ public class TokenService
 
     public async Task<bool> RevokeRefreshTokenAsync(string refreshToken)
     {
-        var token = await _db.RefreshTokens.SingleOrDefaultAsync(t => t.Token == refreshToken);
+        var hash = HashToken(refreshToken);
+        var token = await _db.RefreshTokens.SingleOrDefaultAsync(t => t.TokenHash == hash);
         if (token == null) return false;
 
         if (!token.IsRevoked)
@@ -118,5 +131,21 @@ public class TokenService
         }
 
         return true;
+    }
+
+    public async Task<int> RevokeAllRefreshTokensForUserAsync(string userId)
+    {
+        var tokens = await _db.RefreshTokens
+            .Where(t => t.UserId == userId && t.RevokedAtUtc == null)
+            .ToListAsync();
+
+        if (tokens.Count == 0) return 0;
+
+        var now = DateTime.UtcNow;
+        foreach (var t in tokens)
+            t.RevokedAtUtc = now;
+
+        await _db.SaveChangesAsync();
+        return tokens.Count;
     }
 }

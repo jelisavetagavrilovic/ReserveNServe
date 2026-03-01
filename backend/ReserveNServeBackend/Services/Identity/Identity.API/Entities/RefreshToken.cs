@@ -10,7 +10,8 @@ namespace Identity.API.Entities
         public string UserId { get; set; } = default!;
         public ApplicationUser User { get; set; } = default!;
 
-        public string Token { get; set; } = default!;
+        //Store only a hash of the token for security
+        public string TokenHash { get; set; } = default!;
 
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
         public DateTime ExpiresAtUtc { get; set; }

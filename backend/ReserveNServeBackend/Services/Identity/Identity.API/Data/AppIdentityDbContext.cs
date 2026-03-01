@@ -16,14 +16,14 @@ public class AppIdentityDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<RefreshToken>(b =>
         {
-            b.HasIndex(x => x.Token).IsUnique();
+            b.HasIndex(x => x.TokenHash).IsUnique();
 
             b.HasOne(x => x.User)
              .WithMany(u => u.RefreshTokens)
              .HasForeignKey(x => x.UserId)
              .OnDelete(DeleteBehavior.Cascade);
 
-            b.Property(x => x.Token).IsRequired();
+            b.Property(x => x.TokenHash).IsRequired().HasMaxLength(64); ;
         });
     }
 }

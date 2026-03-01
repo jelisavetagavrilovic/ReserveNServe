@@ -117,4 +117,24 @@ public class AuthController : ControllerBase
             Claims = User.Claims.Select(c => new { c.Type, c.Value })
         });
     }
+
+    [Authorize]
+    [HttpPost("logout-all")]
+    public async Task<IActionResult> LogoutAll()
+    {
+        var userId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        if (userId is null)
+            return Unauthorized(new { message = "Unauthorized." });
+
+        var count = await _tokens.RevokeAllRefreshTokensForUserAsync(userId);
+
+        return Accepted(new
+        {
+            message = "Logged out from all sessions.",
+            revokedTokens = count
+        });
+    }
 }
