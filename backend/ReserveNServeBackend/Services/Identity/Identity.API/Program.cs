@@ -6,12 +6,62 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using System.Threading.RateLimiting;
+using System.Security.Claims;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Controllers + Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddRateLimiter(options =>
+{
+    // What the client gets when limited
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: GetClientKey(httpContext),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,                    // 5 attempts
+                Window = TimeSpan.FromMinutes(1),   // per minute
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("refresh", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: GetClientKey(httpContext),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("register", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: GetClientKey(httpContext),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 3,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+});
+
+static string GetClientKey(HttpContext context)
+{
+    var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
+
+    var userId = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    return userId is null ? ip : $"{ip}:{userId}";
+}
+
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Identity.API", Version = "v1" });
@@ -128,9 +178,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
-
 app.UseHttpsRedirection();
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+app.UseRateLimiter();
 
 // IMPORTANT ORDER
 app.UseAuthentication();

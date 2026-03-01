@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Identity.API.Controllers;
 
@@ -27,6 +28,7 @@ public class AuthController : ControllerBase
         _tokens = tokens;
     }
 
+    [EnableRateLimiting("register")]
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
     {
@@ -68,6 +70,7 @@ public class AuthController : ControllerBase
         return Ok(new AuthResponse(auth.accessToken, auth.expiresAtUtc, auth.refreshToken));
     }
 
+    [EnableRateLimiting("login")]
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest request)
     {
@@ -83,6 +86,7 @@ public class AuthController : ControllerBase
         return Ok(new AuthResponse(auth.accessToken, auth.expiresAtUtc, auth.refreshToken));
     }
 
+    [EnableRateLimiting("refresh")]
     [HttpPost("refresh")]
     public async Task<ActionResult<AuthResponse>> Refresh(RefreshRequest request)
     {
