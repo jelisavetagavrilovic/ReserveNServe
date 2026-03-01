@@ -32,7 +32,12 @@ public class AuthController : ControllerBase
     {
         var existing = await _userManager.FindByEmailAsync(request.Email);
         if (existing != null)
-            return Conflict("Email is already registered.");
+        {
+            return Conflict(new
+            {
+                message = "Email is already registered."
+            });
+        }
 
         var user = new ApplicationUser
         {
@@ -42,10 +47,23 @@ public class AuthController : ControllerBase
 
         var result = await _userManager.CreateAsync(user, request.Password);
         if (!result.Succeeded)
-            return BadRequest(result.Errors.Select(e => e.Description));
+        {
+            return BadRequest(new
+            {
+                message = "Registration failed.",
+                errors = result.Errors.Select(e => new { e.Code, e.Description })
+            });
+        }
 
-        await _userManager.AddToRoleAsync(user, "User");
-
+        var addRole = await _userManager.AddToRoleAsync(user, "User");
+        if (!addRole.Succeeded)
+        {
+            return BadRequest(new
+            {
+                message = "User created, but assigning default role failed.",
+                errors = addRole.Errors.Select(e => new { e.Code, e.Description })
+            });
+        }
         var auth = await _tokens.CreateAuthResponseAsync(user);
         return Ok(new AuthResponse(auth.accessToken, auth.expiresAtUtc, auth.refreshToken));
     }
@@ -70,8 +88,9 @@ public class AuthController : ControllerBase
     {
         var auth = await _tokens.RefreshAsync(request.RefreshToken);
         if (auth == null)
-            return Unauthorized("Invalid refresh token.");
-
+        {
+            return Unauthorized(new { message = "Invalid refresh token." });
+        }
         return Ok(new AuthResponse(auth.Value.accessToken, auth.Value.expiresAtUtc, auth.Value.refreshToken));
     }
 
@@ -80,7 +99,10 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Logout(LogoutRequest request)
     {
         var ok = await _tokens.RevokeRefreshTokenAsync(request.RefreshToken);
-        return ok ? Accepted() : NotFound();
+        if (!ok)
+            return NotFound(new { message = "Refresh token not found." });
+
+        return Accepted(new { message = "Logged out." });
     }
 
     [Authorize]

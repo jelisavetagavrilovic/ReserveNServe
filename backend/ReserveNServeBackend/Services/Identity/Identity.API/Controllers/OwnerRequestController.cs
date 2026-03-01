@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace Identity.API.Controllers;
 
@@ -28,21 +29,31 @@ public class OwnerRequestsController : ControllerBase
             User.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
 
-        if (userId is null) return Unauthorized();
+        if (userId is null)
+            return Unauthorized(new { message = "Unauthorized." });
 
         var user = await _userManager.FindByIdAsync(userId);
-        if (user is null) return Unauthorized();
+        if (user is null)
+            return Unauthorized(new { message = "Unauthorized." });
 
         if (await _userManager.IsInRoleAsync(user, "RestaurantOwner"))
-            return BadRequest("You are already a RestaurantOwner.");
+            return BadRequest(new { message = "You are already a RestaurantOwner." });
 
         if (user.OwnerRequestPending)
-            return BadRequest("Owner request is already pending.");
+            return BadRequest(new { message = "Owner request is already pending." });
 
         user.OwnerRequestPending = true;
         user.OwnerRequestedAtUtc = DateTime.UtcNow;
 
-        await _userManager.UpdateAsync(user);
+        var update = await _userManager.UpdateAsync(user);
+        if (!update.Succeeded)
+        {
+            return BadRequest(new
+            {
+                message = "Failed to submit owner request.",
+                errors = update.Errors.Select(e => new { e.Code, e.Description })
+            });
+        }
 
         return Accepted(new { message = "Owner request submitted." });
     }
@@ -64,26 +75,42 @@ public class OwnerRequestsController : ControllerBase
     public async Task<IActionResult> ApproveRestaurantOwner(ApproveOwnerRequest request)
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
-        if (user is null) return NotFound("User not found.");
+        if (user is null)
+            return NotFound(new { message = "User not found." });
 
         if (await _userManager.IsInRoleAsync(user, "RestaurantOwner"))
-            return BadRequest("User is already a RestaurantOwner.");
+            return BadRequest(new { message = "User is already a RestaurantOwner." });
 
         if (!user.OwnerRequestPending)
-            return BadRequest("This user does not have a pending owner request.");
+            return BadRequest(new { message = "This user does not have a pending owner request." });
 
         var addRole = await _userManager.AddToRoleAsync(user, "RestaurantOwner");
         if (!addRole.Succeeded)
-            return BadRequest(addRole.Errors.Select(e => e.Description));
+        {
+            return BadRequest(new
+            {
+                message = "Failed to approve RestaurantOwner role.",
+                errors = addRole.Errors.Select(e => new { e.Code, e.Description })
+            });
+        }
 
         user.OwnerRequestPending = false;
         user.OwnerRequestedAtUtc = null;
-        await _userManager.UpdateAsync(user);
+
+        var update = await _userManager.UpdateAsync(user);
+        if (!update.Succeeded)
+        {
+            return BadRequest(new
+            {
+                message = "Role assigned, but failed to update owner request state.",
+                errors = update.Errors.Select(e => new { e.Code, e.Description })
+            });
+        }
 
         return Ok(new { message = "User approved as RestaurantOwner." });
     }
 
-    // Optional: owner-only test endpoint
+    
     [Authorize(Policy = "OwnerOnly")]
     [HttpGet("ping")]
     public IActionResult OwnerPing()

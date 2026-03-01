@@ -1,4 +1,5 @@
-﻿namespace Identity.API.DTOs
-{
-    public record LogoutRequest(string RefreshToken);
-}
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Identity.API.DTOs;
+
+public record LogoutRequest([Required] string RefreshToken);

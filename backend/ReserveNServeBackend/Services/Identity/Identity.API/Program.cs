@@ -92,6 +92,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOrOwner", p => p.RequireRole("Admin", "RestaurantOwner"));
 });
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
@@ -126,7 +127,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseExceptionHandler();
+
 app.UseHttpsRedirection();
+
 
 // IMPORTANT ORDER
 app.UseAuthentication();
