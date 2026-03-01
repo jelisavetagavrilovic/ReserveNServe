@@ -76,11 +76,14 @@ public class AuthController : ControllerBase
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user == null)
-            return Unauthorized("Invalid credentials.");
+            return Unauthorized(new { message = "Invalid credentials." });
 
-        var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
+        var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
+        if (result.IsLockedOut)
+            return Unauthorized(new { message = "Account is temporarily locked. Try again later." });
+        
         if (!result.Succeeded)
-            return Unauthorized("Invalid credentials.");
+            return Unauthorized(new { message = "Invalid credentials." });
 
         var auth = await _tokens.CreateAuthResponseAsync(user);
         return Ok(new AuthResponse(auth.accessToken, auth.expiresAtUtc, auth.refreshToken));
