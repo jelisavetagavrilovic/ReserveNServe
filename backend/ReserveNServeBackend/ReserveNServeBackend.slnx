@@ -2,6 +2,9 @@
   <Folder Name="/Services/" />
   <Folder Name="/Services/Reservations/">
     <Project Path="Services/Reservations/Reservations.API/Reservations.API.csproj" />
+    <Project Path="Services/Reservations/Reservations.Application/Reservations.Application.csproj" />
+    <Project Path="Services/Reservations/Reservations.Domain/Reservations.Domain.csproj" />
+    <Project Path="Services/Reservations/Reservations.Infrastructure/Reservations.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="compose.yaml" />

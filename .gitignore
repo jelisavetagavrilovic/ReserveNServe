@@ -426,3 +426,7 @@ out/
 # macOS
 .DS_Store
 
+
+# Development settings anywhere in project
+**/appsettings.Development.json
+**/appsettings.Local.json
