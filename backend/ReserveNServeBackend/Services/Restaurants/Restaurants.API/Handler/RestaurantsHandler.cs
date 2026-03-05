@@ -36,5 +36,28 @@ namespace Restaurants.API.Handler
 
             return tableDTOs;
         }
+
+        internal async Task<byte[]> GetImageAsync(int id)
+        {
+            return await _restaurantsRepository.GetImageAsync(id);
+        }
+
+        internal async Task<IEnumerable<MenuItemDTO>> GetMenuItemsAsync(int restaurantId, IEnumerable<int> ids)
+        {
+            IEnumerable<MenuItem> menuItems =  await _restaurantsRepository.GetMenuItemsAsync(restaurantId, ids);
+            IEnumerable<MenuItemDTO> menuItemDTOs = [];
+
+            foreach(MenuItem menuItem in menuItems)
+            {
+                MenuItemDTO menuItemDTO = new MenuItemDTO
+                {
+                    Id = menuItem.id,
+                    Price = menuItem.price,
+                    Name = menuItem.food_name
+                };
+                menuItemDTOs = menuItemDTOs.Append(menuItemDTO);
+            }
+            return menuItemDTOs;
+        }
     }
 }

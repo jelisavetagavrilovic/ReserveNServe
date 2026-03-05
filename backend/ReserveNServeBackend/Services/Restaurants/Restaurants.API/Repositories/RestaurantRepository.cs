@@ -12,6 +12,15 @@ namespace Restaurants.API.Repositories
             _restaurantsContext = dbContext;
         }
 
+        public async Task<byte[]> GetImageAsync(int id)
+        {
+            return await _restaurantsContext.Restaurants.Where(r => r.id == id).Select(r => r.image).FirstOrDefaultAsync();
+        }
+
+        public async Task<IEnumerable<MenuItem>> GetMenuItemsAsync(int restaurantId, IEnumerable<int> ids)
+        {
+            return await _restaurantsContext.MenuItems.Where(e => e.restaurant_id == restaurantId && ids.Contains(e.id)).ToListAsync();
+        }
 
         public async Task<IEnumerable<Restaurant>> GetRestaurantsAsync()
         {
