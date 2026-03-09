@@ -23,7 +23,7 @@ public class AppIdentityDbContext : IdentityDbContext<ApplicationUser>
              .HasForeignKey(x => x.UserId)
              .OnDelete(DeleteBehavior.Cascade);
 
-            b.Property(x => x.TokenHash).IsRequired().HasMaxLength(64); ;
+            b.Property(x => x.TokenHash).IsRequired().HasMaxLength(64);
         });
     }
 }

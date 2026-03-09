@@ -1,5 +1,6 @@
 ﻿using Identity.API.Data;
 using Identity.API.Entities;
+using Identity.API.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -11,6 +12,7 @@ using System.Text;
 namespace Identity.API.Services;
 
 public class TokenService
+    : ITokenService
 {
     private readonly IConfiguration _config;
     private readonly UserManager<ApplicationUser> _userManager;
@@ -120,15 +122,25 @@ public class TokenService
 
     public async Task<bool> RevokeRefreshTokenAsync(string refreshToken)
     {
-        var hash = HashToken(refreshToken);
-        var token = await _db.RefreshTokens.SingleOrDefaultAsync(t => t.TokenHash == hash);
-        if (token == null) return false;
+        if (string.IsNullOrWhiteSpace(refreshToken))
+            return false;
 
-        if (!token.IsRevoked)
-        {
-            token.RevokedAtUtc = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
-        }
+        var hash = HashToken(refreshToken);
+
+        var token = await _db.RefreshTokens
+            .SingleOrDefaultAsync(t => t.TokenHash == hash);
+
+        if (token == null)
+            return false;
+
+        if (token.RevokedAtUtc != null)
+            return false;
+
+        if (token.ExpiresAtUtc <= DateTime.UtcNow)
+            return false;
+
+        token.RevokedAtUtc = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
 
         return true;
     }
