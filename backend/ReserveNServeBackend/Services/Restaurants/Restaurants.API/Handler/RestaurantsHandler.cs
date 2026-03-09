@@ -1,6 +1,7 @@
 ﻿using Restaurants.API.DTOs;
 using Restaurants.API.Entities;
 using Restaurants.API.Repositories;
+using System.Threading.Tasks;
 
 namespace Restaurants.API.Handler
 {
@@ -42,9 +43,14 @@ namespace Restaurants.API.Handler
             return await _restaurantsRepository.GetImageAsync(id);
         }
 
-        internal async Task<IEnumerable<MenuItemDTO>> GetMenuItemsAsync(int restaurantId, IEnumerable<int> ids)
+        internal async Task<Table> GetTableAsync(int id)
         {
-            IEnumerable<MenuItem> menuItems =  await _restaurantsRepository.GetMenuItemsAsync(restaurantId, ids);
+            return await _restaurantsRepository.GetTableAsync(id);
+        }
+
+        internal async Task<IEnumerable<MenuItemDTO>> GetMenuItemsAsync(IEnumerable<int> ids)
+        {
+            IEnumerable<MenuItem> menuItems =  await _restaurantsRepository.GetMenuItemsAsync(ids);
             IEnumerable<MenuItemDTO> menuItemDTOs = [];
 
             foreach(MenuItem menuItem in menuItems)
@@ -58,6 +64,11 @@ namespace Restaurants.API.Handler
                 menuItemDTOs = menuItemDTOs.Append(menuItemDTO);
             }
             return menuItemDTOs;
+        }
+
+        internal async Task<ReservationDurationDTO> GetReservationDurationAsync(int id)
+        {
+            return await _restaurantsRepository.GetReservationDurationAsync(id);
         }
     }
 }

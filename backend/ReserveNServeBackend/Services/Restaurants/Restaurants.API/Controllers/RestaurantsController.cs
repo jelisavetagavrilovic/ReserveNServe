@@ -17,14 +17,13 @@ namespace Restaurants.API.Controllers
             _restaurantsHandler = restaurantsHandler;
         }
 
-        [HttpGet]
+        [HttpGet("GetRestaurants")]
         public async Task<ActionResult<IEnumerable<Restaurant>>> GetRestaurants()
         {
             var restaurants = await _restaurantsHandler.GetRestaurantsAsync();
             return Ok(restaurants);
         }
 
-        //id_restorana -> sve stolove
         [HttpGet("GetTablesForRestaurant/{id}")]
         public async Task<ActionResult<IEnumerable<TableDTO>>> GetTablesForRestaurant(int id)
         {
@@ -47,14 +46,28 @@ namespace Restaurants.API.Controllers
             return File(image, "image/jpeg");
         }
 
-        //menuItems za prikazivanje
         [HttpPost("GetMenuItemsForRestaurant")]
         public async Task<ActionResult<IEnumerable<MenuItemDTO>>> GetMenuItemsForRestaurant(GetMenuItemsRequest request)
         {
-            var menuItems = await _restaurantsHandler.GetMenuItemsAsync(request.restaurantId, request.ids);
+            var menuItems = await _restaurantsHandler.GetMenuItemsAsync(request.ids);
             return Ok(menuItems);
         }
 
-        //id_restorana -> bool exists, trajanje reyervacije, meniItems
+        [HttpGet("GetTable/{id}")]
+        public async Task<ActionResult<Table>> GetTable(int id)
+        {
+            var table = await _restaurantsHandler.GetTableAsync(id);
+            if(table == null)
+            {
+                return NotFound();
+            }
+            return Ok(table);
+        }
+
+        [HttpGet("GetReservationDuration/{id}")]
+        public async Task<ActionResult<ReservationDurationDTO>> GetReservationDuration(int id)
+        {
+            return Ok(await _restaurantsHandler.GetReservationDurationAsync(id));
+        }
     }
 }

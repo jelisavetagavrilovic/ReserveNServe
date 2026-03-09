@@ -15,7 +15,7 @@
         public double rating { get; set; }
         public string price_range { get; set; }
         public string cusine_type { get; set; }
-        public TimeSpan reservation_duration { get; set; }
+        public int reservation_duration { get; set; }
         public byte[]? image { get; set; }
     }
 }
