@@ -27,7 +27,7 @@ export default function RestaurantsPage() {
   const {
     setSelectedTable, 
     clearCart,
-    currentReservation, setCurrentReservation
+    setCurrentReservationRequest, setCurrentReservationResponse,
   } = useAppStore()
 
   // load cuisines once and restaurants with default filters 
@@ -35,9 +35,10 @@ export default function RestaurantsPage() {
     const init = async () => {
       setSelectedTable(null)
       clearCart()
-      if (currentReservation?.status == "pending" && currentReservation.id)
-        deleteReservation(currentReservation.id)
-      setCurrentReservation(null)
+      // if (currentReservation?.status == "pending" && currentReservation.id)
+      //   deleteReservation(currentReservation.id)
+      setCurrentReservationRequest(null)
+      setCurrentReservationResponse(null)
 
       setLoading(true)
 

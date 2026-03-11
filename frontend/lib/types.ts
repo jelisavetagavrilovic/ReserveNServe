@@ -61,8 +61,8 @@ export type ReservationStatus =
   | "draft"
 
 export interface Reservation {
-  id?: number
-  userId: number
+  id?: string
+  userId: string
   restaurantId: number
   tableId: number
   date: string       // "2026-01-28"

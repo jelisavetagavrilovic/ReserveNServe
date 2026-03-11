@@ -7,11 +7,11 @@ import { MenuContent } from "@/components/menu-content"
 import { YourOrder } from "@/components/order-content"
 import { Button } from "@/components/ui/button"
 import { format, parse } from "date-fns"
-import { Reservation, Restaurant, MenuItem } from "@/lib/types"
+import { Restaurant, MenuItem } from "@/lib/types"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem,} from "@/components/ui/select"
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"
 import { getRestaurantById, getMenuByRestaurant } from "@/lib/services/restaurant.service"
-import { createReservation } from "@/lib/services/reservation.service"
+import { createReservation, updateReservationOrders } from "@/lib/services/reservation.service"
 import Loading from "@/components/loading"
 import {
   Clock,
@@ -21,6 +21,9 @@ import {
   ArrowLeft,
   Armchair,
 } from "lucide-react"
+import { ReservationRequest, ReservationResponse } from "@/lib/types/reservation.types"
+
+
 
 export default function MenuPage() {
   const params = useParams()
@@ -28,10 +31,11 @@ export default function MenuPage() {
   const id = Number(params.id)
 
   const {
-    currentReservation,
-    setCurrentReservation,
+    currentReservationRequest,
+    setCurrentReservationRequest,
+    currentReservationResponse,
+    setCurrentReservationResponse,
     cart,
-    getCartTotal,
     selectedTable,
   } = useAppStore()
 
@@ -43,28 +47,33 @@ export default function MenuPage() {
 
   // fetch data
   useEffect(() => {
-    if (!currentReservation) return
+    if (!currentReservationRequest) return
+
+    console.log("[MenuPage] Current reservation request:", currentReservationRequest)
 
     const init = async () => {
       setLoading(true)
 
       const [restaurantData, menuData] = await Promise.all([
-        getRestaurantById(currentReservation.restaurantId),
-        getMenuByRestaurant(currentReservation.restaurantId),
+        getRestaurantById(currentReservationRequest.restaurantId),
+        getMenuByRestaurant(currentReservationRequest.restaurantId),
       ])
 
       setRestaurant(restaurantData ?? null)
       setMenuItems(menuData)
       setLoading(false)
+
+      console.log("[MenuPage] Fetched restaurant:", restaurantData)
+      console.log("[MenuPage] Fetched menu items:", menuData)
     }
 
     init()
-  }, [currentReservation])
+  }, [currentReservationRequest])
 
   if (loading) return <Loading />
   if (!restaurant) return null
 
-  if (!currentReservation) {
+  if (!currentReservationRequest) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <h1 className="text-2xl font-bold mb-4">
@@ -84,10 +93,11 @@ export default function MenuPage() {
   }
 
   const generateServingTimes = () => {
-    const [hours, minutes] = currentReservation.time.split(":").map(Number)
+    //const [hours, minutes] = currentReservation.time.split(":").map(Number)
+    const [hours, minutes] = currentReservationRequest.startTime.split(":").map(Number)
     const times: string[] = []
 
-    const closeTime = isWeekend(new Date(currentReservation.date))
+    const closeTime = isWeekend(new Date(currentReservationRequest.date))
       ? restaurant.closing_time_weekend
       : restaurant.closing_time_workday
 
@@ -115,27 +125,44 @@ export default function MenuPage() {
 
   // checkout / confirmation
   const handleProceedToCheckout = async () => {
-    const finalServingTime = servingTime || currentReservation.time
+    if (!currentReservationRequest) return
 
-    const reservationData: Reservation = {
-      ...currentReservation,
-      preOrders: cart.map(item => ({
+    // request object to send to backend
+    const request: ReservationRequest = {
+      ...currentReservationRequest,
+      orders: cart.map(item => ({
         menuItemId: item.id,
-        food_name: item.food_name,
-        price: item.price,
-        quantity: item.quantity,
+        quantity: item.quantity
       })),
-      servingTime: cart.length > 0 ? finalServingTime : null,
-      totalAmount: getCartTotal(),
+      servingTime: cart.length > 0 ? servingTime || currentReservationRequest.startTime : undefined,
+    }
+    setCurrentReservationRequest(request)
+
+    let reservation: ReservationResponse | undefined
+
+    if (currentReservationResponse) {
+      // update existing reservation
+      reservation = await updateReservationOrders(currentReservationResponse.id, request)
+      if (!reservation) {
+        console.error("Failed to update reservation")
+        return
+      }
+      setCurrentReservationResponse(reservation)
+      console.log("[MenuPage] Updated reservation:", reservation)
+    } else {
+      // create new reservation
+      reservation = await createReservation(request)
+      setCurrentReservationResponse(reservation)
+      console.log("[MenuPage] Created reservation:", reservation)
     }
 
-    const reservation = await createReservation(reservationData)
-
-    if (reservation.status === "confirmed") {
+    // redirect
+    if (reservation && reservation.status === "Confirmed") {
       router.push(`/confirmation?reservationId=${reservation.id}`)
-    } else {
-      setCurrentReservation(reservation)
+    } else if (reservation && reservation.status === "PendingPayment") {
       router.push("/checkout")
+    } else {
+      console.log("[MenuPage] Reservation failed:", reservation)
     }
   }
 
@@ -181,7 +208,7 @@ export default function MenuPage() {
                   <span>
                     {format(
                       parse(
-                        currentReservation.date,
+                        currentReservationRequest.date,
                         "yyyy-MM-dd",
                         new Date()
                       ),
@@ -191,11 +218,13 @@ export default function MenuPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>{currentReservation.time}</span>
+                  {/* <span>{currentReservation.time}</span> */}
+                  <span>{currentReservationRequest.startTime}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>{currentReservation.partySize} guests</span>
+                  {/* <span>{currentReservation.partySize} guests</span> */}
+                  <span>{currentReservationRequest.guestNumber} guests</span>
                 </div>
                 {selectedTable && (
                   <div className="flex items-center gap-2">

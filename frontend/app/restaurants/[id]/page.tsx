@@ -12,7 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format, addDays } from "date-fns"
-import type { Restaurant, Table, MenuItem, Reservation } from "@/lib/types"
+// import type { Restaurant, Table, MenuItem, Reservation } from "@/lib/types"
+import type { Restaurant, Table, MenuItem } from "@/lib/types"
+import type { ReservationRequest } from "@/lib/types/reservation.types"
+
 import { getRestaurantById, getTablesByRestaurant, getMenuByRestaurant } from "@/lib/services/restaurant.service"
 import { createReservation } from "@/lib/services/reservation.service" 
 import Loading from "@/components/loading"
@@ -27,29 +30,20 @@ import {
   Check,
   UtensilsCrossed,
 } from "lucide-react"
+import { useAuth } from "@/auth/hooks/useAuth"
+import { saveRedirectUrl } from "@/auth/store/redirect.store"
 
 export default function RestaurantDetailPage() {
   const router = useRouter()
   const params = useParams()
   const id = Number(params.id)
 
-  const { user, setUser,
+  const {
     selectedTable, setSelectedTable,
-    currentReservation, setCurrentReservation
+    setCurrentReservationRequest, setCurrentReservationResponse
   } = useAppStore()
 
-  // todo: authorization
-  useEffect(() => {
-      if (!user) {
-        setUser({
-          id: 1,
-          name: "John",
-          surname: "Doe",
-          email: "john.doe@example.com",
-          phone: "+1234567890",
-        })
-      }
-    }, [user, setUser])
+  const { user, isAuthenticated } = useAuth()
 
 
   // state 
@@ -129,25 +123,46 @@ export default function RestaurantDetailPage() {
   }
 
 
-  const createDraftReservation = (): Reservation | null => {
-    if (!user || !restaurant || !selectedTable || !date || !time) return null
+  // const createDraftReservation = (): Reservation | null => {
+  //   if (!user || !restaurant || !selectedTable || !date || !time) return null
 
-    const reservation: Reservation = {
-      userId: user.id,
+  //   const reservation: Reservation = {
+  //     userId: user.id,
+  //     restaurantId: restaurant.id,
+  //     tableId: selectedTable.id,
+  //     date: format(date, "yyyy-MM-dd"),
+  //     time,
+  //     partySize,
+  //     preOrders: [],
+  //     servingTime: null,
+  //     totalAmount: 0,
+  //     status: "draft"
+  //   }
+
+  //   setCurrentReservation(reservation)
+  //   console.log("[RestaurantDetail] Draft Reservation:", reservation)
+  //   return reservation
+  // }
+
+  const buildReservationRequest = (): ReservationRequest | null => {
+    if (!restaurant || !selectedTable || !date || !time) return null
+
+    const request: ReservationRequest = {
       restaurantId: restaurant.id,
-      tableId: selectedTable.id,
+      tableGroupId: selectedTable.id,
+
       date: format(date, "yyyy-MM-dd"),
-      time,
-      partySize,
-      preOrders: [],
-      servingTime: null,
-      totalAmount: 0,
-      status: "draft",
+      startTime: time,
+
+      guestNumber: partySize,
+
+      orders: [],
+      servingTime: undefined,
     }
 
-    setCurrentReservation(reservation)
-    console.log("[RestaurantDetail] Draft Reservation:", reservation)
-    return reservation
+    console.log("[RestaurantDetail] ReservationRequest:", request)
+
+    return request
   }
 
   // fetch data
@@ -185,15 +200,30 @@ export default function RestaurantDetailPage() {
   }
 
   const handleBookWithoutPreorder = async () => {
-    if (!date || !time || !selectedTable) return
+    if (!isAuthenticated) {
+      saveRedirectUrl()
+      router.push("/login")
+      return
+    }
 
-    const reservation = createDraftReservation()
-    if (!reservation) return
+    if (!date || !time || !selectedTable) {
+      alert("Please select date, time and table before booking.")
+      return
+    }
+
+    // const reservation = createDraftReservation()
+    // if (!reservation) return
+
+    const request = buildReservationRequest()
+    if (!request) return
 
     try {
-      const confirmedReservation = await createReservation(reservation)
-      if (confirmedReservation.status === "confirmed") {
-        router.push(`/confirmation?reservationId=${confirmedReservation.id}`)
+      // const confirmedReservation = await createReservation(reservation)
+      const confirmedReservation = await createReservation(request)
+      setCurrentReservationResponse(confirmedReservation)
+
+      if (confirmedReservation.status === "Confirmed") {
+        router.push(`/confirmation?reservationId=${confirmedReservation.id?.toString()}`)
       } else {
         console.log("[RestaurantDetail] Booking failed:", confirmedReservation)
       }
@@ -202,10 +232,21 @@ export default function RestaurantDetailPage() {
     }
   }
 
+  // const handleProceedToMenu = () => {
+  //   if (!date || !time || !selectedTable) return
+
+  //   createDraftReservation()
+  //   router.push(`/restaurants/${id}/menu`)
+  // }
+
   const handleProceedToMenu = () => {
     if (!date || !time || !selectedTable) return
 
-    createDraftReservation()
+    const request = buildReservationRequest()
+    if (!request) return
+
+    setCurrentReservationRequest(request)
+
     router.push(`/restaurants/${id}/menu`)
   }
 

@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Mail, Lock, User, Phone, Loader2 } from "lucide-react"
+import { authService } from "@/auth/services/auth.service"
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -28,7 +29,7 @@ export default function RegisterPage() {
 
   // todo: add submit handler
   const handleSubmit = async (e: React.FormEvent) => {
-    return 
+    return
   }
 
   return (
@@ -42,7 +43,7 @@ export default function RegisterPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">
-                Name <span className="text-primary">*</span>
+                Full Name <span className="text-primary">*</span>
               </Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -56,7 +57,7 @@ export default function RegisterPage() {
                 />
               </div>
             </div>
-            <div className="space-y-1.5">
+            {/* <div className="space-y-1.5">
               <Label htmlFor="surname">
                 Surname <span className="text-primary">*</span>
               </Label>
@@ -71,7 +72,7 @@ export default function RegisterPage() {
                   onChange={handleChange}
                 />
               </div>
-            </div>
+            </div> */}
             <div className="space-y-1.5">
               <Label htmlFor="email">
                 Email <span className="text-primary">*</span>

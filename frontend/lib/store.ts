@@ -3,6 +3,7 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import type { User, CartItem, Reservation, Table } from "./types"
+import { ReservationRequest, OrderRequest, ReservationResponse } from "./types/reservation.types"
 
 interface AppState {
   // user
@@ -23,13 +24,21 @@ interface AppState {
   getCartTotal: () => number
 
   // reservation
-  currentReservation: Reservation | null
-  setCurrentReservation: (reservation: Reservation | null) => void
-  updateCurrentReservation: (updates: Partial<Reservation>) => void
+  // currentReservation: Reservation | null
+  // setCurrentReservation: (reservation: Reservation | null) => void
+  // updateCurrentReservation: (updates: Partial<Reservation>) => void
   // todo: replace with API call - don't need me
   // reservations: Reservation[]
   // addReservation: (reservation: Reservation) => void
   // cancelReservation: (id: number) => void
+
+  currentReservationRequest: ReservationRequest | null
+  setCurrentReservationRequest: (reservation: ReservationRequest | null) => void
+  updateCurrentReservationRequest: (updates: Partial<ReservationRequest>) => void
+
+  currentReservationResponse: ReservationResponse | null
+  setCurrentReservationResponse: (reservation: ReservationResponse | null) => void
+  updateCurrentReservationResponse: (updates: Partial<ReservationResponse>) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -80,20 +89,35 @@ export const useAppStore = create<AppState>()(
       getCartTotal: () =>
         get().cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
 
-      // reservation 
-      currentReservation: null,
-      setCurrentReservation: (reservation) => 
-        set({ currentReservation: reservation }),
-      updateCurrentReservation: (updates) => {
-        const { currentReservation } = get()
-        if (!currentReservation) return
+      // reservation request
+      currentReservationRequest: null,
+      setCurrentReservationRequest: (reservation) => 
+        set({ currentReservationRequest: reservation }),
+      updateCurrentReservationRequest: (updates) => {
+        const { currentReservationRequest } = get()
+        if (!currentReservationRequest) return
         set({ 
-          currentReservation: { 
-            ...currentReservation, 
+          currentReservationRequest: { 
+            ...currentReservationRequest, 
             ...updates 
           } 
         })
       },
+      // reservation response
+      currentReservationResponse: null,
+      setCurrentReservationResponse: (reservation) => 
+        set({ currentReservationResponse: reservation }),
+      updateCurrentReservationResponse: (updates) => {
+        const { currentReservationResponse } = get()
+        if (!currentReservationResponse) return
+        set({ 
+          currentReservationResponse: {
+            ...currentReservationResponse, 
+            ...updates 
+          } 
+        })
+      }
+
       // reservations: [],
       // addReservation: (reservation) => {
       //   set((state) => ({
@@ -113,7 +137,8 @@ export const useAppStore = create<AppState>()(
         cart: state.cart,
         selectedTable: state.selectedTable,
         // reservations: state.reservations, // tmp
-        currentReservation: state.currentReservation,
+        currentReservationRequest: state.currentReservationRequest,
+        currentReservationResponse: state.currentReservationResponse,
       }),
       // refresh
       onRehydrateStorage: () => (state) => {

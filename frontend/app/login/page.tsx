@@ -7,15 +7,38 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Mail, Lock, Loader2 } from "lucide-react"
 import { useState } from "react"
+import { authService } from "@/auth/services/auth.service"
+import { useRouter } from "next/navigation"
+import { clearRedirectUrl, getRedirectUrl } from "@/auth/store/redirect.store"
 
 export default function LoginPage() {
+  const router = useRouter() 
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  // todo: add submit handler
   const handleSubmit = async (e: React.FormEvent) => {
-    return
+    e.preventDefault()  
+    setIsLoading(true)
+    setError("")
+
+    try {
+      const response = await authService.login({ email, password })
+      
+      console.log("Login successful!", response)
+      alert(`Login successful!\nAccess token: ${response.accessToken}`)
+
+      const redirect = getRedirectUrl()
+      clearRedirectUrl()
+      router.push(redirect)
+    } catch (err) {
+      console.error(err)
+      setError("Login failed. Check console for details.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

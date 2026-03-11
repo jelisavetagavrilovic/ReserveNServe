@@ -6,7 +6,7 @@ import Link from "next/link"
 
 import { useAppStore } from "@/lib/store"
 import { getReservationById } from "@/lib/services/reservation.service"
-import { Reservation } from "@/lib/types"
+import { ReservationResponse } from "@/lib/types/reservation.types"
 
 import { ReservationSummary } from "@/components/reservation-summary"
 import { Card, CardContent } from "@/components/ui/card"
@@ -14,46 +14,54 @@ import { Button } from "@/components/ui/button"
 import Loading from "./loading"
 
 import { CheckCircle, Download, Home, Mail } from "lucide-react"
+import { useAuth } from "@/auth/hooks/useAuth"
 
 
 export function ConfirmationContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const reservationIdParam = searchParams.get("reservationId")
+  const reservationId = searchParams.get("reservationId")
 
   const {
-    user,
     clearCart,
     setSelectedTable,
-    setCurrentReservation,
+    setCurrentReservationRequest,
+    setCurrentReservationResponse,
   } = useAppStore()
 
-  const [reservation, setReservation] = useState<Reservation | null>(null)
+  const { user } = useAuth()
+
+  const [reservation, setReservation] = useState<ReservationResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
   // fetch reservation
   useEffect(() => {
-    if (!reservationIdParam) return
+    if (!reservationId) return
 
-    const reservationId = Number(reservationIdParam)
-    if (Number.isNaN(reservationId)) return
+    console.log("Reservation ID from URL:", reservationId)
 
     const init = async () => {
       setLoading(true)
       const data = await getReservationById(reservationId)
-      setReservation(data ?? null)
+      setReservation(data || null)
       setLoading(false)
 
       // cleanup after successful confirmation load
       clearCart()
       setSelectedTable(null)
-      setCurrentReservation(null)
+      setCurrentReservationRequest(null)
+      setCurrentReservationResponse(null)
     }
 
     init()
-  }, [reservationIdParam, clearCart, setSelectedTable, setCurrentReservation])
+  }, [reservationId, clearCart, setSelectedTable, setCurrentReservationRequest, setCurrentReservationResponse])
 
-  // todo: block back button
+  // check if reservation loaded correctly
+  useEffect(() => {
+    if (reservation) console.log("Loaded reservation:", reservation)
+  }, [reservation])
+
+  // todo: mustn't allow going back from confirmation page
    // block back button after loading
   // useEffect(() => {
   // if (loading || !reservation) return
@@ -68,7 +76,7 @@ export function ConfirmationContent() {
 
   useEffect(() => {
     // window.history.pushState(reservationIdParam, "", '/confirmation?reservationId=')
-    window.history.replaceState(null, "", `/confirmation?reservationId=${reservationIdParam}`)
+    window.history.replaceState(null, "", `/confirmation?reservationId=${reservationId}`)
 
     const handlePopState = () => {
       router.replace("/") 
@@ -80,8 +88,8 @@ export function ConfirmationContent() {
   // -----
 
 
-  if (loading || !user) return <Loading />
-  if (!reservation) return null
+  if (loading) return <Loading />
+  if (!reservation || !user) return null
 
   return (
     <div className="min-h-screen py-8">

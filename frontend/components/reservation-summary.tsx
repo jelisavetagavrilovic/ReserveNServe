@@ -2,10 +2,11 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import type { Reservation, Restaurant, Table } from "@/lib/types"
+import type { Restaurant, Table } from "@/lib/types"
 import { format, parse } from "date-fns"
 import { getRestaurantById, getTableById } from "@/lib/services/restaurant.service"
 import { useEffect, useState } from "react"
+import { ReservationResponse } from "@/lib/types/reservation.types"
 
 import {
   MapPin,
@@ -15,14 +16,10 @@ import {
   Armchair,
   Utensils,
   Phone,
-  Mail,
-  Link,
-  Download,
-  Home,
 } from "lucide-react"
 
 type Props = {
-  reservation: Partial<Reservation>
+  reservation: ReservationResponse
   mode: "checkout" | "confirmation"
 }
 
@@ -34,16 +31,18 @@ export function ReservationSummary({ reservation, mode }: Props) {
     const init = async () => {
       if (reservation.restaurantId) {
         const r = await getRestaurantById(reservation.restaurantId)
+        console.log("Fetched restaurant:", r)
         setRestaurant(r ?? null)
       }
 
-      if (reservation.tableId) {
-        const t = await getTableById(reservation.tableId)
+      if (reservation.tableGroupId) {
+        const t = await getTableById(reservation.tableGroupId)
+        console.log("Fetched table:", t)
         setTable(t ?? null)
       }
     }
     init()
-  }, [reservation.restaurantId, reservation.tableId])
+  }, [reservation.restaurantId, reservation.tableGroupId])
 
   return (
     <div className="lg:sticky lg:top-24h-fit">
@@ -59,7 +58,7 @@ export function ReservationSummary({ reservation, mode }: Props) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Confirmation Number</p>
-                <p className="text-lg font-mono font-bold">{reservation.id?.toString().toUpperCase()}</p>
+                <p className="text-lg font-mono font-bold">{reservation.id.toString()}</p>
               </div>
             </div>
           </div>
@@ -119,17 +118,17 @@ export function ReservationSummary({ reservation, mode }: Props) {
           )}
 
           {/* time */}
-          {reservation.time && (
+          {reservation.startTime && (
             <div className="flex items-center gap-3">
               <Clock className="h-5 w-5 text-muted-foreground" />
-              <p>{reservation.time}</p>
+              <p>{reservation.startTime}</p>
             </div>
           )}
 
           {/* guests */}
           <div className="flex items-center gap-3">
             <Users className="h-5 w-5 text-muted-foreground" />
-            <p>{reservation.partySize} guests</p>
+            <p>{reservation.guestNumber} guests</p>
           </div>
 
           {/* table */}
@@ -143,7 +142,7 @@ export function ReservationSummary({ reservation, mode }: Props) {
           )}
 
           {/* pre-order */}
-          {reservation.preOrders && reservation.preOrders.length > 0 && (
+          {reservation.orders && reservation.orders.length > 0 && (
             <>
               <Separator />
 
@@ -160,12 +159,12 @@ export function ReservationSummary({ reservation, mode }: Props) {
                 </div>
 
               <div className="space-y-2 rounded-lg p-4">
-                {reservation.preOrders.map(
+                {reservation.orders.map(
                   (item) =>
                     item && (
                       <div key={item.menuItemId} className="flex justify-between text-sm">
                         <span>
-                          {item.quantity}x {item.food_name}
+                          {item.quantity}x {item.foodName}
                         </span>
                         <span>${(item.price * item.quantity).toFixed(2)}</span>
                       </div>

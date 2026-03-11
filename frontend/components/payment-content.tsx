@@ -18,8 +18,8 @@ import {
 export function Payment() {
   const router = useRouter()
   const {
-    currentReservation,
-    updateCurrentReservation,
+    currentReservationResponse,
+    updateCurrentReservationResponse,
     // addReservation,
   } = useAppStore()
 
@@ -31,7 +31,7 @@ export function Payment() {
     name: "",
   })
 
-  if (!currentReservation) {
+  if (!currentReservationResponse) {
     return (
       <div className="text-center py-16">
         <p>No reservation in progress</p>
@@ -40,7 +40,7 @@ export function Payment() {
     )
   }
 
-  const totalAmount = currentReservation.totalAmount ?? 0
+  const totalAmount = currentReservationResponse.totalAmount ?? 0
 
   const handleCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let { name, value } = e.target
@@ -69,15 +69,15 @@ export function Payment() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!cardDetails.number || !cardDetails.expiry || !cardDetails.cvc || !cardDetails.name) return
-    if (!currentReservation?.id) return
+    //if (!currentReservationResponse.id) return
 
     setIsProcessing(true)
 
     try {
-      const updatedReservation = await processPayment(currentReservation.id)
+      const updatedReservation = await processPayment(currentReservationResponse.id)
       if (!updatedReservation) throw new Error("Reservation not found")
 
-      updateCurrentReservation(updatedReservation)
+      updateCurrentReservationResponse(updatedReservation)
 
       router.push(`/confirmation?reservationId=${updatedReservation.id}`)
     } catch (error) {

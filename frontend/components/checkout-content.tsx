@@ -12,7 +12,7 @@ import { useEffect, useState } from "react"
 
 export function CheckoutContent() {
   const router = useRouter();
-  const { currentReservation } = useAppStore();
+  const { currentReservationResponse } = useAppStore();
   const [hydrated, setHydrated] = useState(false)
  
   // refresh
@@ -20,19 +20,24 @@ export function CheckoutContent() {
     setHydrated(true)
   }, [])
   useEffect(() => {
-    if (hydrated && !currentReservation) {
+    if (hydrated && ! currentReservationResponse) {
       router.replace("/")
     }
-  }, [hydrated, currentReservation, router])
+  }, [hydrated, currentReservationResponse, router])
 
-  if (!hydrated || !currentReservation) {
+  if (!hydrated || !currentReservationResponse) {
     return <Loading />
   }
 
+  // const backToMenuUrl =
+  //   `/restaurants/${currentReservation.restaurantId}/menu` +
+  //   `?tableId=${currentReservation.tableId}&date=${currentReservation.date}` + 
+  //   `&time=${currentReservation.time}&partySize=${currentReservation.partySize}`
+
   const backToMenuUrl =
-    `/restaurants/${currentReservation.restaurantId}/menu` +
-    `?tableId=${currentReservation.tableId}&date=${currentReservation.date}` + 
-    `&time=${currentReservation.time}&partySize=${currentReservation.partySize}`
+    `/restaurants/${currentReservationResponse.restaurantId}/menu` +
+    `?tableId=${currentReservationResponse.tableGroupId}&date=${currentReservationResponse.date}` + 
+    `&time=${currentReservationResponse.startTime}&partySize=${currentReservationResponse.guestNumber}`
 
   return (
     <div className="min-h-screen py-8">
@@ -56,7 +61,7 @@ export function CheckoutContent() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
           <ReservationSummary 
-            reservation={currentReservation} 
+            reservation={currentReservationResponse} 
             mode="checkout" 
           />
           <Payment />
