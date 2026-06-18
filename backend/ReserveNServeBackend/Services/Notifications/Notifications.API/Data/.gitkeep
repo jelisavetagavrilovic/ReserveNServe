@@ -1,0 +1,3 @@
+# Data — EF Core DbContext i entiteti
+# Npr. NotificationsDbContext, EmailMessage (email log + outbox red).
+# Obrisati ovaj fajl kada se doda prvi pravi fajl u folder.
