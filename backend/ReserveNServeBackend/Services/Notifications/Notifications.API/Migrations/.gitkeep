@@ -1,0 +1,3 @@
+# Migrations — EF Core migracije (auto-generisane)
+# Primenjuju se automatski na startu preko db.Database.MigrateAsync().
+# Obrisati ovaj fajl kada se doda prva migracija.
