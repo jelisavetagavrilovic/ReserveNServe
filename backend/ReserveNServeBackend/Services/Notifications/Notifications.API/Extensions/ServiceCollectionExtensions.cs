@@ -1,5 +1,7 @@
+using Notifications.API.Data;
 using Notifications.API.Services;
 using Notifications.API.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace Notifications.API.Extensions;
 
@@ -9,6 +11,11 @@ public static class ServiceCollectionExtensions
     {
         services.AddControllers();
         services.AddOpenApi();
+
+        services.AddDbContext<NotificationsDbContext>(options =>
+        {
+            options.UseSqlServer(configuration.GetConnectionString("NotificationsDb"));
+        });
 
         services.AddCors(options =>
         {
