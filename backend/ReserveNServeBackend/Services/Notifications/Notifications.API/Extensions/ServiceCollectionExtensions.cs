@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
 
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
         services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddSingleton<IEmailTemplateRenderer, ScribanTemplateRenderer>();
 
         return services;
     }

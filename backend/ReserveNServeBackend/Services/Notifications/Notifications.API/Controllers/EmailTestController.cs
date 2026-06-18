@@ -9,11 +9,16 @@ namespace Notifications.API.Controllers;
 public class EmailTestController : ControllerBase
 {
     private readonly IEmailSender _emailSender;
+    private readonly IEmailTemplateRenderer _templateRenderer;
     private readonly IWebHostEnvironment _env;
 
-    public EmailTestController(IEmailSender emailSender, IWebHostEnvironment env)
+    public EmailTestController(
+        IEmailSender emailSender,
+        IEmailTemplateRenderer templateRenderer,
+        IWebHostEnvironment env)
     {
         _emailSender = emailSender;
+        _templateRenderer = templateRenderer;
         _env = env;
     }
 
@@ -28,12 +33,13 @@ public class EmailTestController : ControllerBase
 
         var to = string.IsNullOrWhiteSpace(request.To) ? "test@reservenserve.local" : request.To;
 
-        await _emailSender.SendAsync(
-            to,
-            "ReserveNServe test email",
-            "<h1>It works!</h1><p>This is a test email sent through IEmailSender via MailHog.</p>",
+        var html = await _templateRenderer.RenderAsync(
+            "confirm-email",
+            new { ConfirmUrl = "http://localhost:3000/confirm-email?userId=demo&token=sample-token" },
             cancellationToken);
 
-        return Ok(new { message = "Test email sent.", to });
+        await _emailSender.SendAsync(to, "Confirm your email", html, cancellationToken);
+
+        return Ok(new { message = "Test email sent.", to, template = "confirm-email" });
     }
 }
