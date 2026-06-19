@@ -1,3 +1,0 @@
-# Consumers — MassTransit event consumeri (Faza 3)
-# Npr. UserRegisteredConsumer, PasswordResetRequestedConsumer, OwnerRequestApprovedConsumer.
-# Obrisati ovaj fajl kada se doda prvi pravi fajl u folder.

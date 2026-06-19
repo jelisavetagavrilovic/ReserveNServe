@@ -1,6 +1,8 @@
+using Notifications.API.Consumers;
 using Notifications.API.Data;
 using Notifications.API.Services;
 using Notifications.API.Services.Interfaces;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace Notifications.API.Extensions;
@@ -32,6 +34,25 @@ public static class ServiceCollectionExtensions
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddSingleton<IEmailTemplateRenderer, ScribanTemplateRenderer>();
+        services.AddScoped<IEmailDispatcher, EmailDispatcher>();
+
+        services.AddMassTransit(x =>
+        {
+            x.AddConsumer<UserRegisteredConsumer>();
+            x.AddConsumer<PasswordResetRequestedConsumer>();
+            x.AddConsumer<OwnerRequestApprovedConsumer>();
+
+            x.UsingRabbitMq((context, cfg) =>
+            {
+                var rabbit = configuration.GetSection("RabbitMq");
+                cfg.Host(rabbit["Host"] ?? "localhost", h =>
+                {
+                    h.Username(rabbit["Username"] ?? "guest");
+                    h.Password(rabbit["Password"] ?? "guest");
+                });
+                cfg.ConfigureEndpoints(context);
+            });
+        });
 
         return services;
     }

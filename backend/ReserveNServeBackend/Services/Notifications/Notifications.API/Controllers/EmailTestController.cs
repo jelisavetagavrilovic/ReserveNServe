@@ -10,19 +10,16 @@ namespace Notifications.API.Controllers;
 [Route("api/email")]
 public class EmailTestController : ControllerBase
 {
-    private readonly IEmailSender _emailSender;
-    private readonly IEmailTemplateRenderer _templateRenderer;
+    private readonly IEmailDispatcher _dispatcher;
     private readonly NotificationsDbContext _db;
     private readonly IWebHostEnvironment _env;
 
     public EmailTestController(
-        IEmailSender emailSender,
-        IEmailTemplateRenderer templateRenderer,
+        IEmailDispatcher dispatcher,
         NotificationsDbContext db,
         IWebHostEnvironment env)
     {
-        _emailSender = emailSender;
-        _templateRenderer = templateRenderer;
+        _dispatcher = dispatcher;
         _db = db;
         _env = env;
     }
@@ -38,42 +35,21 @@ public class EmailTestController : ControllerBase
 
         var to = string.IsNullOrWhiteSpace(request.To) ? "test@reservenserve.local" : request.To;
 
-        var message = new EmailMessage
+        var message = await _dispatcher.DispatchAsync(
+            to,
+            "Confirm your email",
+            "confirm-email",
+            new { ConfirmUrl = "http://localhost:3000/confirm-email?userId=demo&token=sample-token" },
+            cancellationToken);
+
+        return Ok(new
         {
-            Id = Guid.NewGuid(),
-            ToEmail = to,
-            Subject = "Confirm your email",
-            TemplateName = "confirm-email",
-            Status = EmailStatus.Pending,
-            Attempts = 1,
-            CreatedAtUtc = DateTime.UtcNow
-        };
-        _db.EmailMessages.Add(message);
-        await _db.SaveChangesAsync(cancellationToken);
-
-        try
-        {
-            var html = await _templateRenderer.RenderAsync(
-                message.TemplateName,
-                new { ConfirmUrl = "http://localhost:3000/confirm-email?userId=demo&token=sample-token" },
-                cancellationToken);
-
-            await _emailSender.SendAsync(to, message.Subject, html, cancellationToken);
-
-            message.Status = EmailStatus.Sent;
-            message.SentAtUtc = DateTime.UtcNow;
-            await _db.SaveChangesAsync(cancellationToken);
-
-            return Ok(new { message = "Test email sent.", id = message.Id, to, template = message.TemplateName });
-        }
-        catch (Exception ex)
-        {
-            message.Status = EmailStatus.Failed;
-            message.Error = ex.Message;
-            await _db.SaveChangesAsync(cancellationToken);
-
-            return StatusCode(500, new { message = "Failed to send test email.", id = message.Id, error = ex.Message });
-        }
+            message = message.Status == EmailStatus.Sent ? "Test email sent." : "Test email failed.",
+            id = message.Id,
+            to,
+            template = message.TemplateName,
+            status = message.Status.ToString()
+        });
     }
 
     // Dev-only helper to view the most recent email log entries.
