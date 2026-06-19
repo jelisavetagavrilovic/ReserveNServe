@@ -1,6 +1,7 @@
 ﻿using Identity.API.Data;
 using Identity.API.Services;
 using Identity.API.Services.Interfaces;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -154,6 +155,19 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthApplicationService, AuthApplicationService>();
         services.AddScoped<IOwnerRequestApplicationService, OwnerRequestApplicationService>();
+
+        services.AddMassTransit(x =>
+        {
+            x.UsingRabbitMq((context, cfg) =>
+            {
+                var rabbit = configuration.GetSection("RabbitMq");
+                cfg.Host(rabbit["Host"] ?? "localhost", h =>
+                {
+                    h.Username(rabbit["Username"] ?? "guest");
+                    h.Password(rabbit["Password"] ?? "guest");
+                });
+            });
+        });
 
         return services;
     }

@@ -3,8 +3,11 @@ using Identity.API.DTOs;
 using Identity.API.DTOs.Auth;
 using Identity.API.Services.Interfaces;
 using Identity.API.Services.Results;
+using MassTransit;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
+using ReserveNServe.Contracts;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -15,15 +18,21 @@ public class AuthApplicationService : IAuthApplicationService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly ITokenService _tokens;
+    private readonly IPublishEndpoint _publishEndpoint;
+    private readonly ILogger<AuthApplicationService> _logger;
 
     public AuthApplicationService(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
-        ITokenService tokens)
+        ITokenService tokens,
+        IPublishEndpoint publishEndpoint,
+        ILogger<AuthApplicationService> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _tokens = tokens;
+        _publishEndpoint = publishEndpoint;
+        _logger = logger;
     }
 
     public async Task<AppResult> RegisterAsync(RegisterRequest request, bool isDevelopment)
@@ -64,6 +73,8 @@ public class AuthApplicationService : IAuthApplicationService
         }
 
         var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+        await PublishSafelyAsync(new UserRegistered(user.Id, user.Email!, token), nameof(UserRegistered));
 
         if (isDevelopment)
         {
@@ -202,6 +213,8 @@ public class AuthApplicationService : IAuthApplicationService
             token
         };
 
+        await PublishSafelyAsync(new PasswordResetRequested(user.Id, user.Email!, token), nameof(PasswordResetRequested));
+
         if (isDevelopment)
         {
             return new AppResult(StatusCodes.Status200OK, new
@@ -236,5 +249,18 @@ public class AuthApplicationService : IAuthApplicationService
         }
 
         return new AppResult(StatusCodes.Status200OK, new { message = "Password has been reset." });
+    }
+
+    private async Task PublishSafelyAsync<T>(T message, string eventName) where T : class
+    {
+        // Email delivery is best-effort: a broker hiccup must not fail the auth flow.
+        try
+        {
+            await _publishEndpoint.Publish(message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish {EventName} event.", eventName);
+        }
     }
 }

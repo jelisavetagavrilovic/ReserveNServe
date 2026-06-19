@@ -4,7 +4,9 @@ using Identity.API.DTOs;
 using Identity.API.DTOs.Auth;
 using Identity.API.Services;
 using Identity.API.Services.Interfaces;
+using MassTransit;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Moq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
@@ -14,6 +16,17 @@ namespace Identity.API.Tests;
 
 public class AuthApplicationServiceTests
 {
+    private static AuthApplicationService CreateService(
+        Mock<UserManager<ApplicationUser>> userManager,
+        Mock<SignInManager<ApplicationUser>> signInManager,
+        Mock<ITokenService> tokens)
+        => new AuthApplicationService(
+            userManager.Object,
+            signInManager.Object,
+            tokens.Object,
+            Mock.Of<IPublishEndpoint>(),
+            Mock.Of<ILogger<AuthApplicationService>>());
+
     [Fact]
     public async Task RegisterAsync_ShouldReturn409_WhenEmailAlreadyExists()
     {
@@ -24,7 +37,7 @@ public class AuthApplicationServiceTests
         userManager.Setup(x => x.FindByEmailAsync("ana@test.com"))
             .ReturnsAsync(new ApplicationUser { Email = "ana@test.com" });
 
-        var service = new AuthApplicationService(userManager.Object, signInManager.Object, tokens.Object);
+        var service = CreateService(userManager, signInManager, tokens);
 
         var result = await service.RegisterAsync(
             new RegisterRequest("ana@test.com", "Password123"),
@@ -47,7 +60,7 @@ public class AuthApplicationServiceTests
                 EmailConfirmed = false
             });
 
-        var service = new AuthApplicationService(userManager.Object, signInManager.Object, tokens.Object);
+        var service = CreateService(userManager, signInManager, tokens);
 
         var result = await service.LoginAsync(new LoginRequest("ana@test.com", "Password123"));
 
@@ -77,7 +90,7 @@ public class AuthApplicationServiceTests
         tokens.Setup(x => x.CreateAuthResponseAsync(user))
             .ReturnsAsync(("access-token", DateTime.UtcNow.AddMinutes(60), "refresh-token"));
 
-        var service = new AuthApplicationService(userManager.Object, signInManager.Object, tokens.Object);
+        var service = CreateService(userManager, signInManager, tokens);
 
         var result = await service.LoginAsync(new LoginRequest("ana@test.com", "Password123"));
 
@@ -94,7 +107,7 @@ public class AuthApplicationServiceTests
         tokens.Setup(x => x.RefreshAsync("bad-token"))
             .ReturnsAsync(((string accessToken, DateTime expiresAtUtc, string refreshToken)?)null);
 
-        var service = new AuthApplicationService(userManager.Object, signInManager.Object, tokens.Object);
+        var service = CreateService(userManager, signInManager, tokens);
 
         var result = await service.RefreshAsync(new RefreshRequest("bad-token"));
 
@@ -111,7 +124,7 @@ public class AuthApplicationServiceTests
         tokens.Setup(x => x.RevokeRefreshTokenAsync("bad-token"))
             .ReturnsAsync(false);
 
-        var service = new AuthApplicationService(userManager.Object, signInManager.Object, tokens.Object);
+        var service = CreateService(userManager, signInManager, tokens);
 
         var result = await service.LogoutAsync(new LogoutRequest("bad-token"));
 
@@ -132,7 +145,7 @@ public class AuthApplicationServiceTests
             new Claim(ClaimTypes.Role, "User")
         }, "test"));
 
-        var service = new AuthApplicationService(userManager.Object, signInManager.Object, tokens.Object);
+        var service = CreateService(userManager, signInManager, tokens);
 
         var result = service.Me(principal);
 
@@ -154,7 +167,7 @@ public class AuthApplicationServiceTests
         new Claim(ClaimTypes.NameIdentifier, "u1")
     }, "test"));
 
-        var service = new AuthApplicationService(userManager.Object, signInManager.Object, tokens.Object);
+        var service = CreateService(userManager, signInManager, tokens);
 
         var result = await service.LogoutAllAsync(principal);
 
@@ -182,7 +195,7 @@ public class AuthApplicationServiceTests
         signInManager.Setup(x => x.CheckPasswordSignInAsync(user, "Password123", true))
             .ReturnsAsync(SignInResult.LockedOut);
 
-        var service = new AuthApplicationService(userManager.Object, signInManager.Object, tokens.Object);
+        var service = CreateService(userManager, signInManager, tokens);
 
         var result = await service.LoginAsync(new LoginRequest("ana@test.com", "Password123"));
 

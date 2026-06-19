@@ -2,9 +2,12 @@
 using Identity.API.DTOs;
 using Identity.API.Services.Interfaces;
 using Identity.API.Services.Results;
+using MassTransit;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using ReserveNServe.Contracts;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -13,10 +16,17 @@ namespace Identity.API.Services;
 public class OwnerRequestApplicationService : IOwnerRequestApplicationService
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IPublishEndpoint _publishEndpoint;
+    private readonly ILogger<OwnerRequestApplicationService> _logger;
 
-    public OwnerRequestApplicationService(UserManager<ApplicationUser> userManager)
+    public OwnerRequestApplicationService(
+        UserManager<ApplicationUser> userManager,
+        IPublishEndpoint publishEndpoint,
+        ILogger<OwnerRequestApplicationService> logger)
     {
         _userManager = userManager;
+        _publishEndpoint = publishEndpoint;
+        _logger = logger;
     }
 
     public async Task<AppResult> RequestRestaurantOwnerAsync(ClaimsPrincipal user)
@@ -111,6 +121,15 @@ public class OwnerRequestApplicationService : IOwnerRequestApplicationService
                 message = "Role assigned, but failed to update owner request state.",
                 errors = update.Errors.Select(e => new { e.Code, e.Description })
             });
+        }
+
+        try
+        {
+            await _publishEndpoint.Publish(new OwnerRequestApproved(user.Email!, true, null));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish {EventName} event.", nameof(OwnerRequestApproved));
         }
 
         return new AppResult(StatusCodes.Status200OK, new { message = "User approved as RestaurantOwner." });

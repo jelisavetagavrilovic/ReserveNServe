@@ -3,8 +3,10 @@ using FluentAssertions;
 using Identity.API.Data;
 using Identity.API.DTOs;
 using Identity.API.Services;
+using MassTransit;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -12,11 +14,17 @@ namespace Identity.API.Tests;
 
 public class OwnerRequestApplicationServiceTests
 {
+    private static OwnerRequestApplicationService CreateService(Mock<UserManager<ApplicationUser>> userManager)
+        => new OwnerRequestApplicationService(
+            userManager.Object,
+            Mock.Of<IPublishEndpoint>(),
+            Mock.Of<ILogger<OwnerRequestApplicationService>>());
+
     [Fact]
     public async Task RequestRestaurantOwnerAsync_ShouldReturn401_WhenNoUserIdClaim()
     {
         var userManager = TestHelpers.CreateUserManagerMock();
-        var service = new OwnerRequestApplicationService(userManager.Object);
+        var service = CreateService(userManager);
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity());
 
@@ -38,7 +46,7 @@ public class OwnerRequestApplicationServiceTests
         userManager.Setup(x => x.FindByIdAsync("u1")).ReturnsAsync(user);
         userManager.Setup(x => x.IsInRoleAsync(user, "RestaurantOwner")).ReturnsAsync(true);
 
-        var service = new OwnerRequestApplicationService(userManager.Object);
+        var service = CreateService(userManager);
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
@@ -65,7 +73,7 @@ public class OwnerRequestApplicationServiceTests
         userManager.Setup(x => x.IsInRoleAsync(user, "RestaurantOwner")).ReturnsAsync(false);
         userManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new OwnerRequestApplicationService(userManager.Object);
+        var service = CreateService(userManager);
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
@@ -84,7 +92,7 @@ public class OwnerRequestApplicationServiceTests
         userManager.Setup(x => x.FindByEmailAsync("missing@test.com"))
             .ReturnsAsync((ApplicationUser?)null);
 
-        var service = new OwnerRequestApplicationService(userManager.Object);
+        var service = CreateService(userManager);
 
         var result = await service.ApproveRestaurantOwnerAsync(new ApproveOwnerRequest("missing@test.com"));
 
@@ -108,7 +116,7 @@ public class OwnerRequestApplicationServiceTests
         userManager.Setup(x => x.AddToRoleAsync(user, "RestaurantOwner")).ReturnsAsync(IdentityResult.Success);
         userManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new OwnerRequestApplicationService(userManager.Object);
+        var service = CreateService(userManager);
 
         var result = await service.ApproveRestaurantOwnerAsync(new ApproveOwnerRequest("user@test.com"));
 
