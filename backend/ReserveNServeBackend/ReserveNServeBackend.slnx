@@ -11,6 +11,9 @@
   <Folder Name="/Services/Notifications/">
     <Project Path="Services/Notifications/Notifications.API/Notifications.API.csproj" />
   </Folder>
+  <Folder Name="/BuildingBlocks/">
+    <Project Path="BuildingBlocks/Contracts/Contracts.csproj" />
+  </Folder>
   <Folder Name="/Tests/">
     <Project Path="../../Identity.API.Tests/Identity.API.Tests.csproj" />
   </Folder>

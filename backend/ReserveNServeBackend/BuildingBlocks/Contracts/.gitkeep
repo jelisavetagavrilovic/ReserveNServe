@@ -1,5 +1,0 @@
-# BuildingBlocks/Contracts — deljeni event ugovori (class library)
-# Referenciraju ga i Identity.API (publisher) i Notifications.API (consumer).
-# Sadrži samo record evente bez logike:
-#   UserRegistered, PasswordResetRequested, OwnerRequestApproved, ReservationConfirmed.
-# Obrisati ovaj fajl kada se doda Contracts.csproj i prvi event.
