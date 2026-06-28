@@ -1,5 +1,7 @@
 import type { Restaurant, Table, MenuItem } from "./types"
 
+// TYPES WILL BE DELETED WHEN WE HAVE BACKEND
+
 export const mockRestaurants: Restaurant[] = [
     {
       id: 1,
@@ -16,6 +18,7 @@ export const mockRestaurants: Restaurant[] = [
       price_range: "$$",
       cusine_type: "Italian",
       reservation_duration: "03:00:00",
+      image: '',
     },
     {
       id: 2,
@@ -32,6 +35,7 @@ export const mockRestaurants: Restaurant[] = [
       price_range: "$$$",
       cusine_type: "Japanese",
       reservation_duration: "03:00:00",
+      image: '',
     },
     {
       id: 3,
@@ -48,6 +52,7 @@ export const mockRestaurants: Restaurant[] = [
       price_range: "$$",
       cusine_type: "Balkan",
       reservation_duration: "03:00:00",
+      image: '',
     },
     {
       id: 4,
@@ -64,6 +69,7 @@ export const mockRestaurants: Restaurant[] = [
       price_range: "$$$",
       cusine_type: "French",
       reservation_duration: "03:00:00",
+      image: '',
     },
     {
       id: 5,
@@ -80,6 +86,7 @@ export const mockRestaurants: Restaurant[] = [
       price_range: "$$$",
       cusine_type: "Mediterranean",
       reservation_duration: "03:00:00",
+      image: '',
     },
 ]
 
@@ -184,3 +191,10 @@ export const mockMenuItems: MenuItem[] = [
 ]
 
 
+export const mockAvailableSlots: Record<number, string[]> = {
+  1: ["10:00", "10:30", "11:00", "11:30", "12:00"],
+  2: ["11:00", "11:30", "12:00", "12:30"],
+  3: ["09:00", "09:30", "10:00", "10:30"],
+  4: ["12:00", "12:30", "13:00"],
+  5: ["10:00", "10:30", "11:00"],
+}

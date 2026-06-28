@@ -1,0 +1,75 @@
+// restaurants
+export type Restaurant = {
+  id: number
+  name: string
+  description: string
+  city: string
+  address: string
+  phone_number: string
+  opening_time_workday: string
+  closing_time_workday: string
+  opening_time_weekend: string
+  closing_time_weekend: string
+  rating: number
+  price_range: string
+  cusine_type: string
+  reservation_duration: string
+  image: string
+}
+
+export type RestaurantQueryRequest = {
+  search?: string
+  cuisine?: string
+  price?: string
+  sortBy?: "rating" | "name"
+}
+
+export type RestaurantListResponse = {
+  restaurants: Restaurant[]
+}
+
+export type RestaurantDetailsResponse = {
+  restaurant: Restaurant
+}
+
+export type RestaurantFiltersResponse = {
+  cuisines: string[]
+  rangePrices: string[]
+}
+
+// tables
+export type Table = {
+  id: number
+  restaurantId: number
+  seats: number
+  location: string
+  available_number: number
+}
+
+export type TableListResponse = {
+  tables: Table[]
+}
+
+export type TableDetailsResponse = {
+  table: Table
+}
+
+// menu
+export type MenuItem = {
+  id: number
+  restaurant_id: number
+  food_name: string
+  description: string
+  price: number
+  image: string
+  category: string
+}
+
+export type MenuListResponse = {
+  items: MenuItem[]
+}
+
+// available slots
+export type AvailableSlotsResponse = {
+  slots: string[]
+}

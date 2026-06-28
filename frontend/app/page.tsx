@@ -2,7 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 
-import { Search, CalendarCheck, Utensils, CreditCard, Clock, Star, Table } from "lucide-react"
+import { Search } from "lucide-react"
 
 export default function HomePage() {
 

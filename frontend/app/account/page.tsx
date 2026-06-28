@@ -4,27 +4,58 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
+
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { User, Mail, Phone, Loader2, Save, Calendar, RotateCcw } from "lucide-react"
-import Link from "next/link"
+
+import {
+  User,
+  Mail,
+  Phone,
+  Loader2,
+  Save,
+  Calendar,
+  RotateCcw,
+} from "lucide-react"
+
 import { useAuth } from "@/auth/hooks/useAuth"
 import { authService } from "@/auth/services/auth.service"
 
 export default function AccountPage() {
   const router = useRouter()
   const { user, isAuthenticated } = useAuth()
+
+  const [isHydrated, setIsHydrated] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
     phone: "",
   })
-  const [originalProfile, setOriginalProfile] = useState(profileData)
+
+  const [originalProfile, setOriginalProfile] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  })
 
   useEffect(() => {
+    setIsHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isHydrated) return
+
     if (!isAuthenticated) {
       router.push("/login")
       return
@@ -34,16 +65,23 @@ export default function AccountPage() {
       const data = {
         name: user.name,
         email: user.email,
-        phone: user.phone ?? ""
+        phone: user.phone ?? "",
       }
 
       setProfileData(data)
       setOriginalProfile(data)
     }
-  }, [isAuthenticated, user, router])
+  }, [isHydrated, isAuthenticated, user, router])
 
-  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setProfileData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+  const handleProfileChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const { name, value } = e.target
+
+    setProfileData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
   }
 
   const isDirty =
@@ -55,38 +93,54 @@ export default function AccountPage() {
     setProfileData(originalProfile)
   }
 
-  const handleProfileSubmit = async (e: React.FormEvent) => {
+  const handleProfileSubmit = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
       await authService.updateUser({
         name: profileData.name,
-        phone: profileData.phone
+        email: profileData.email,
+        phone: profileData.phone,
       })
-    } catch (err) {
-      console.error("Failed to update profile", err)
+
+      setOriginalProfile(profileData)
+    } catch (error) {
+      console.error("Failed to update profile", error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (!isAuthenticated) {
-    return null
+  if (!isHydrated || !isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Account Settings</h1>
-          <p className="text-muted-foreground">Manage your profile information</p>
+          <h1 className="text-3xl font-bold mb-2">
+            Account Settings
+          </h1>
+          <p className="text-muted-foreground">
+            Manage your profile information
+          </p>
         </div>
 
         <Card className="mb-6">
           <CardContent className="pt-6">
             <Link href="/bookings">
-              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-3">
+              <Button
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2 py-3"
+              >
                 <Calendar className="h-5 w-5" />
                 View All Bookings
               </Button>
@@ -94,47 +148,58 @@ export default function AccountPage() {
           </CardContent>
         </Card>
 
-        {/* profile */}
         <Card>
           <CardHeader>
             <CardTitle>Profile Information</CardTitle>
-            <CardDescription>Update your personal information</CardDescription>
+            <CardDescription>
+              Update your personal information
+            </CardDescription>
           </CardHeader>
+
           <CardContent>
-            <form onSubmit={handleProfileSubmit} className="space-y-4">
+            <form
+              onSubmit={handleProfileSubmit}
+              className="space-y-4"
+            >
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
+
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+
                   <Input
                     id="name"
                     name="name"
-                    placeholder="John Doe"
                     className="pl-10"
                     value={profileData.name}
                     onChange={handleProfileChange}
                   />
                 </div>
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
+
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+
                   <Input
                     id="email"
                     name="email"
                     type="email"
-                    placeholder="you@example.com"
                     className="pl-10"
                     value={profileData.email}
                     onChange={handleProfileChange}
                   />
                 </div>
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
+
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+
                   <Input
                     id="phone"
                     name="phone"
@@ -146,6 +211,7 @@ export default function AccountPage() {
                   />
                 </div>
               </div>
+
               <div className="flex justify-end gap-2 pt-4">
                 {isDirty && (
                   <Button
@@ -158,7 +224,10 @@ export default function AccountPage() {
                   </Button>
                 )}
 
-                <Button type="submit" disabled={!isDirty || isLoading}>
+                <Button
+                  type="submit"
+                  disabled={!isDirty || isLoading}
+                >
                   {isLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -172,7 +241,6 @@ export default function AccountPage() {
                   )}
                 </Button>
               </div>
-
             </form>
           </CardContent>
         </Card>

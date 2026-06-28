@@ -1,7 +1,8 @@
 import Link from "next/link"
 import Image from "next/image"
-import type { Restaurant } from "@/lib/types"
-import { Card, CardContent } from "@/components/ui/card"
+import type { Restaurant } from "@/lib/types/restaurant.types"
+import { Card, CardContent, } from "@/components/ui/card"
+import { getImageSrc } from "@/lib/utils"
 
 import { Star, MapPin, Clock } from "lucide-react"
 
@@ -15,7 +16,7 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
       <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 group h-full">
         <div className="relative h-48 overflow-hidden">
           <Image
-            src={restaurant.image || "/placeholder.svg"}
+            src={getImageSrc(restaurant.image) || "/placeholder.svg"}
             alt={restaurant.name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"

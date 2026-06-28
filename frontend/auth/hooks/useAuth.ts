@@ -1,19 +1,25 @@
 // "use client"
 
-// import { useSyncExternalStore } from "react"
-// import { authStore } from "../store/auth.store"
+// import { useEffect, useState } from "react"
+// import { authStore, AuthSnapshot } from "../store/auth.store"
 
 // export function useAuth() {
-
-//   const auth = useSyncExternalStore(
-//     authStore.subscribe.bind(authStore),
-//     authStore.getSnapshot.bind(authStore)
+//   const [auth, setAuth] = useState<AuthSnapshot>(() =>
+//     authStore.getSnapshot()
 //   )
+
+//   useEffect(() => {
+//     authStore.hydrateFromStorage()
+
+//     const unsubscribe = authStore.subscribe(setAuth)
+
+//     return unsubscribe
+//   }, [])
 
 //   return {
 //     user: auth.user,
 //     accessToken: auth.accessToken,
-//     isAuthenticated: !!auth.accessToken
+//     isAuthenticated: !!auth.accessToken,
 //   }
 // }
 
@@ -23,18 +29,17 @@ import { useEffect, useState } from "react"
 import { authStore, AuthSnapshot } from "../store/auth.store"
 
 export function useAuth() {
-  const [auth, setAuth] = useState<AuthSnapshot>(authStore.getSnapshot())
+  const [auth, setAuth] = useState<AuthSnapshot>(
+    authStore.getSnapshot()
+  )
 
   useEffect(() => {
-    const unsubscribe: () => void = authStore.subscribe(setAuth)
-    return () => {
-      unsubscribe()
-    }
+    return authStore.subscribe(setAuth)
   }, [])
 
   return {
     user: auth.user,
     accessToken: auth.accessToken,
-    isAuthenticated: !!auth.accessToken
+    isAuthenticated: !!auth.accessToken,
   }
 }

@@ -8,36 +8,19 @@ import { ArrowLeft } from "lucide-react"
 import { Payment } from "@/components/payment-content"
 import { ReservationSummary } from "@/components/reservation-summary" 
 import Loading from "./loading"
-import { useEffect, useState } from "react"
+
 
 export function CheckoutContent() {
-  const router = useRouter();
-  const { currentReservationResponse } = useAppStore();
-  const [hydrated, setHydrated] = useState(false)
- 
-  // refresh
-  useEffect(() => {
-    setHydrated(true)
-  }, [])
-  useEffect(() => {
-    if (hydrated && ! currentReservationResponse) {
-      router.replace("/")
-    }
-  }, [hydrated, currentReservationResponse, router])
+  const router = useRouter()
+  const isClient = typeof window !== "undefined"
 
-  if (!hydrated || !currentReservationResponse) {
+  const { currentReservationRequest, currentReservationResponse } = useAppStore()
+
+  if (!currentReservationRequest || !currentReservationResponse) {
     return <Loading />
   }
 
-  // const backToMenuUrl =
-  //   `/restaurants/${currentReservation.restaurantId}/menu` +
-  //   `?tableId=${currentReservation.tableId}&date=${currentReservation.date}` + 
-  //   `&time=${currentReservation.time}&partySize=${currentReservation.partySize}`
-
-  const backToMenuUrl =
-    `/restaurants/${currentReservationResponse.restaurantId}/menu` +
-    `?tableId=${currentReservationResponse.tableGroupId}&date=${currentReservationResponse.date}` + 
-    `&time=${currentReservationResponse.startTime}&partySize=${currentReservationResponse.guestNumber}`
+  const backToMenuUrl =`/restaurants/${currentReservationRequest.restaurantId}/menu`
 
   return (
     <div className="min-h-screen py-8">

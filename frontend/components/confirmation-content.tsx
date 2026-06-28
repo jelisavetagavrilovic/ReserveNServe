@@ -1,95 +1,53 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 
 import { useAppStore } from "@/lib/store"
-import { getReservationById } from "@/lib/services/reservation.service"
-import { ReservationResponse } from "@/lib/types/reservation.types"
-
 import { ReservationSummary } from "@/components/reservation-summary"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import Loading from "./loading"
 
 import { CheckCircle, Download, Home, Mail } from "lucide-react"
 import { useAuth } from "@/auth/hooks/useAuth"
-
+import Loading from "./loading"
 
 export function ConfirmationContent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const reservationId = searchParams.get("reservationId")
+  const { user } = useAuth()
 
   const {
+    currentReservationResponse: reservation,
     clearCart,
     setSelectedTable,
     setCurrentReservationRequest,
     setCurrentReservationResponse,
   } = useAppStore()
 
-  const { user } = useAuth()
-
-  const [reservation, setReservation] = useState<ReservationResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  // fetch reservation
-  useEffect(() => {
-    if (!reservationId) return
-
-    console.log("Reservation ID from URL:", reservationId)
-
-    const init = async () => {
-      setLoading(true)
-      const data = await getReservationById(reservationId)
-      setReservation(data || null)
-      setLoading(false)
-
-      // cleanup after successful confirmation load
-      clearCart()
-      setSelectedTable(null)
-      setCurrentReservationRequest(null)
-      setCurrentReservationResponse(null)
-    }
-
-    init()
-  }, [reservationId, clearCart, setSelectedTable, setCurrentReservationRequest, setCurrentReservationResponse])
-
-  // check if reservation loaded correctly
-  useEffect(() => {
-    if (reservation) console.log("Loaded reservation:", reservation)
-  }, [reservation])
-
-  // todo: mustn't allow going back from confirmation page
-   // block back button after loading
-  // useEffect(() => {
-  // if (loading || !reservation) return
-
-  // const handlePopState = () => {
-  //   router.replace("/")
-  // }
-
-  // window.addEventListener("popstate", handlePopState)
-  // return () => window.removeEventListener("popstate", handlePopState)
-  // }, [loading, reservation, router])
+  const handleFinish = () => {
+    clearCart()
+    setSelectedTable(null)
+    setCurrentReservationRequest(null)
+    setCurrentReservationResponse(null)
+  }
 
   useEffect(() => {
-    // window.history.pushState(reservationIdParam, "", '/confirmation?reservationId=')
-    window.history.replaceState(null, "", `/confirmation?reservationId=${reservationId}`)
+    window.history.pushState(null, "", window.location.href)
 
     const handlePopState = () => {
-      router.replace("/") 
+      window.history.pushState(null, "", window.location.href)
+      router.replace("/")
     }
 
     window.addEventListener("popstate", handlePopState)
-    return () => window.removeEventListener("popstate", handlePopState)
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState)
+    }
   }, [router])
-  // -----
 
-
-  if (loading) return <Loading />
-  if (!reservation || !user) return null
+  if (!reservation || !user) return <Loading />
 
   return (
     <div className="min-h-screen py-8">
@@ -102,6 +60,7 @@ export function ConfirmationContent() {
           <h2 className="text-3xl font-bold mb-2">
             Reservation Confirmed!
           </h2>
+
           <p className="text-muted-foreground">
             Thank you for your booking! Here are your details:
           </p>
@@ -116,11 +75,34 @@ export function ConfirmationContent() {
           <CardContent className="pt-4">
             <div className="flex items-start gap-2.5">
               <Mail className="h-5 w-5 text-primary mt-0.5" />
+
               <div className="text-sm">
-                <p className="font-medium">Check Your Email</p>
-                <p className="text-muted-foreground">
-                  We&apos;ve sent a confirmation email to {user.email}
-                </p>
+                {reservation.emailStatus === "Sent" && (
+                  <>
+                    <p className="font-medium">Check Your Email</p>
+                    <p className="text-muted-foreground">
+                      We&apos;ve sent a confirmation email to {user.email}
+                    </p>
+                  </>
+                )}
+
+                {reservation.emailStatus === "Pending" && (
+                  <>
+                    <p className="font-medium">Sending Confirmation...</p>
+                    <p className="text-muted-foreground">
+                      Your confirmation email is being prepared.
+                    </p>
+                  </>
+                )}
+
+                {reservation.emailStatus === "Failed" && (
+                  <>
+                    <p className="font-medium">Email Not Sent</p>
+                    <p className="text-muted-foreground">
+                      Your reservation is confirmed, but the email could not be delivered.
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </CardContent>
@@ -128,13 +110,21 @@ export function ConfirmationContent() {
 
         <div className="flex flex-col sm:flex-row gap-4">
           <Link href="/bookings" className="flex-1">
-            <Button variant="outline" className="w-full gap-2 bg-transparent">
+            <Button
+              variant="outline"
+              className="w-full gap-2 bg-transparent"
+              onClick={handleFinish}
+            >
               <Download className="h-4 w-4" />
               View My Bookings
             </Button>
           </Link>
+
           <Link href="/" className="flex-1">
-            <Button className="w-full gap-2">
+            <Button 
+              className="w-full gap-2"
+              onClick={handleFinish}
+            >
               <Home className="h-4 w-4" />
               Back to Home
             </Button>

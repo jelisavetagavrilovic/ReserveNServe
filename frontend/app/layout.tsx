@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/ui/header";
+import { Providers } from "./providers"
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -38,8 +39,11 @@ export default function RootLayout({
           font-sans antialiased
         `}
       >
-        <Header />
-        <main className="flex-1">{children}</main>
+        {/* <main className="flex-1">{children}</main> */}
+        <Providers>
+          <Header />
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -1,20 +1,3 @@
-// "use client"
-
-// export function saveRedirectUrl() {
-//   if (typeof window === "undefined") return
-//   sessionStorage.setItem("redirectAfterLogin", window.location.pathname)
-// }
-
-// export function getRedirectUrl() {
-//   if (typeof window === "undefined") return "/"
-//   return sessionStorage.getItem("redirectAfterLogin") || "/"
-// }
-
-// export function clearRedirectUrl() {
-//   if (typeof window === "undefined") return
-//   sessionStorage.removeItem("redirectAfterLogin")
-// }
-
 "use client"
 
 export function saveRedirectUrl() {

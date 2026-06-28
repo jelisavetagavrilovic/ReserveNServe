@@ -7,6 +7,9 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string
   password: string
+  name: string     
+  phone?: string   
+  role?: string
 }
 
 export interface RefreshRequest {

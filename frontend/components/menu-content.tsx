@@ -2,11 +2,12 @@
 
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardHeader, CardTitle, } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger, } from "@/components/ui/tabs"
 import { Plus, Minus } from "lucide-react"
-import type { MenuItem } from "@/lib/types"
+import type { MenuItem } from "@/lib/types/restaurant.types"
 import { useAppStore } from "@/lib/store"
+import { getImageSrc } from "@/lib/utils"
 
 interface MenuContentProps {
   menuItems: MenuItem[]
@@ -47,7 +48,7 @@ export function MenuContent({ menuItems }: MenuContentProps) {
                   >
                     <div className="relative h-24 w-24 rounded-lg overflow-hidden flex-shrink-0">
                       <Image
-                        src={item.image || "/placeholder.svg"}
+                        src={getImageSrc(item.image) || "/placeholder.svg"}
                         alt={item.food_name}
                         fill
                         className="object-cover"

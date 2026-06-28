@@ -13,6 +13,21 @@ import { ReservationResponse } from "@/lib/types/reservation.types"
 import { parse, isPast } from "date-fns"
 import { BookingCard } from "@/components/booking-card"
 
+function EmptyState({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <Card>
+      <CardContent className="py-12 text-center">
+        <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+        <h3 className="text-lg font-semibold mb-2">{title}</h3>
+        <p className="text-muted-foreground mb-4">{subtitle}</p>
+        <Link href="/restaurants">
+          <Button>Browse Restaurants</Button>
+        </Link>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function BookingsPage() {
   const router = useRouter()
   const { user, isAuthenticated } = useAuth()
@@ -21,22 +36,24 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!isAuthenticated) router.push("/login")
-  }, [isAuthenticated, router])
+    if (!isAuthenticated) {
+      router.replace("/login")
+      return
+    }
 
-  useEffect(() => {
+    if (!user) return
+
     const init = async () => {
-      if (!user) return
       setLoading(true)
       const data = await getReservationsForUser()
       setReservations(data || [])
       setLoading(false)
     }
-    init()
-  }, [user])
-  
+
+    void init()
+  }, [isAuthenticated, router, user])
+
   if (!isAuthenticated) {
-    router.push("/login")
     return null
   }
 
@@ -70,19 +87,6 @@ export default function BookingsPage() {
       console.error("Failed to cancel reservation:", error)
     }
   }
-
-  const EmptyState = ({ title, subtitle }: { title: string; subtitle: string }) => (
-    <Card>
-      <CardContent className="py-12 text-center">
-        <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-        <h3 className="text-lg font-semibold mb-2">{title}</h3>
-        <p className="text-muted-foreground mb-4">{subtitle}</p>
-        <Link href="/restaurants">
-          <Button>Browse Restaurants</Button>
-        </Link>
-      </CardContent>
-    </Card>
-  )
 
   return (
     <div className="min-h-screen py-6">

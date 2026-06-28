@@ -21,7 +21,7 @@ export interface Restaurant {
   price_range: string
   cusine_type: string
   reservation_duration: string // "HH:MM:SS" format
-  image?: string
+  image: string
 }
 
 export interface Table {
@@ -38,7 +38,7 @@ export interface MenuItem {
   food_name: string
   description: string
   price: number
-  image?: string 
+  image: string 
   category: string
 }
 

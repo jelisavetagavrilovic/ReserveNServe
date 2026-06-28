@@ -1,7 +1,6 @@
 // "use client"
 
-// import { decodeJwt, getEmailFromPayload, getNameFromPayload, getRolesFromPayload } from "../jwt"
-// import { AuthResponse, LoginRequest, RegisterRequest, User } from "../types/auth"
+// import { User } from "../types/auth"
 
 // export type AuthSnapshot = {
 //   accessToken: string | null
@@ -12,70 +11,37 @@
 // const STORAGE_KEY = "auth:snapshot"
 
 // class AuthStore {
-//   private state: AuthSnapshot = { accessToken: null, refreshToken: null, user: null }
-//   private listeners = new Set<(s: AuthSnapshot) => void>()
-
-//   constructor() {
-//     this.rehydrateFromStorage()
-//     if (typeof window !== "undefined") {
-//       window.addEventListener("storage", (e) => {
-//         if (e.key === STORAGE_KEY) {
-//           this.rehydrateFromStorage()
-//         }
-//       })
-//     }
+//   private state: AuthSnapshot = {
+//     accessToken: null,
+//     refreshToken: null,
+//     user: null,
 //   }
 
-//   private persist() {
-//     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state))
-//     this.emit()
+//   private listeners = new Set<(s: AuthSnapshot) => void>()
+
+//   subscribe(listener: (s: AuthSnapshot) => void) {
+//     this.listeners.add(listener)
+//     return () => {
+//       this.listeners.delete(listener)
+//     }
 //   }
 
 //   private emit() {
 //     for (const l of this.listeners) l(this.getSnapshot())
 //   }
 
-//   subscribe(listener: (s: AuthSnapshot) => void) {
-//     this.listeners.add(listener)
-//     return () => this.listeners.delete(listener)
-//   }
-
 //   getSnapshot(): AuthSnapshot {
 //     return { ...this.state }
 //   }
 
-//   setTokens(accessToken: string | null, refreshToken?: string | null) {
-//     this.state.accessToken = accessToken ?? null
-//     if (typeof refreshToken !== "undefined") this.state.refreshToken = refreshToken ?? null
-//     this.persist()
-//   }
-
-//   setUser(user: AuthSnapshot["user"]) {
-//     this.state.user = user ?? null
-//     this.persist()
-//   }
-
-//   clear() {
-//     this.state = { accessToken: null, refreshToken: null, user: null }
-//     localStorage.removeItem(STORAGE_KEY)
-//     this.emit()
-//   }
-
-//   // rehydrateFromStorage() {
-//   //   try {
-//   //     const raw = localStorage.getItem(STORAGE_KEY)
-//   //     this.state = raw ? JSON.parse(raw) : { accessToken: null, refreshToken: null, user: null }
-//   //   } catch {
-//   //     this.state = { accessToken: null, refreshToken: null, user: null }
-//   //   }
-//   //   this.emit()
-//   // }
-
-//   rehydrateFromStorage() {
+//   hydrateFromStorage() {
 //     if (typeof window === "undefined") return
+
 //     try {
 //       const raw = localStorage.getItem(STORAGE_KEY)
-//       this.state = raw ? JSON.parse(raw) : { accessToken: null, refreshToken: null, user: null }
+//       this.state = raw
+//         ? JSON.parse(raw)
+//         : { accessToken: null, refreshToken: null, user: null }
 //     } catch {
 //       this.state = { accessToken: null, refreshToken: null, user: null }
 //     }
@@ -83,39 +49,46 @@
 //     this.emit()
 //   }
 
-//   get accessToken() { return this.state.accessToken }
-//   get refreshToken() { return this.state.refreshToken }
-//   get user() { return this.state.user }
-// }
-
-
-// export const authStore = new AuthStore()
-
-// // helpers
-// export const isAuthenticated = () => !!authStore.accessToken
-// export const getAccessToken = () => authStore.accessToken
-// export const getRefreshToken = () => authStore.refreshToken
-// export const getCurrentUser = () => authStore.user
-
-// export function setTokensAndUserFromToken(accessToken: string | null, refreshToken: string | null) {
-//   authStore.setTokens(accessToken, refreshToken)
-//   if (accessToken) {
-//     const payload = decodeJwt(accessToken)
-//     if (payload) {
-//       const roles = getRolesFromPayload(payload)
-//       const email = getEmailFromPayload(payload) ?? ""
-//       const name = getNameFromPayload(payload) ?? email ?? ""
-//       const id = payload.sub ?? payload.sid ?? email ?? name ?? crypto.randomUUID()
-//       authStore.setUser({ id: String(id), email, name, phone: "", role: roles.join(",") })
+//   setTokens(accessToken: string | null, refreshToken?: string | null) {
+//     this.state.accessToken = accessToken
+//     if (refreshToken !== undefined) {
+//       this.state.refreshToken = refreshToken
 //     }
+//     this.persist()
+//   }
+
+//   setUser(user: User | null) {
+//     this.state.user = user
+//     this.persist()
+//   }
+
+//   clear() {
+//     this.state = {
+//       accessToken: null,
+//       refreshToken: null,
+//       user: null,
+//     }
+
+//     if (typeof window !== "undefined") {
+//       localStorage.removeItem(STORAGE_KEY)
+//     }
+
+//     this.emit()
+//   }
+
+//   private persist() {
+//     if (typeof window === "undefined") return
+//     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state))
+//     this.emit()
 //   }
 // }
+
+// export const authStore = new AuthStore()
 
 
 "use client"
 
-import { decodeJwt, getEmailFromPayload, getNameFromPayload, getRolesFromPayload } from "../jwt"
-import { User } from "../types/auth"
+import { User } from "../types/auth.types"
 
 export type AuthSnapshot = {
   accessToken: string | null
@@ -126,95 +99,83 @@ export type AuthSnapshot = {
 const STORAGE_KEY = "auth:snapshot"
 
 class AuthStore {
-  private state: AuthSnapshot = { accessToken: null, refreshToken: null, user: null }
-  private listeners = new Set<(s: AuthSnapshot) => void>()
+  private state: AuthSnapshot = {
+    accessToken: null,
+    refreshToken: null,
+    user: null,
+  }
 
-  constructor() {
-    // init only on browser
-    if (typeof window !== "undefined") {
-      this.rehydrateFromStorage()
-      window.addEventListener("storage", (e) => {
-        if (e.key === STORAGE_KEY) {
-          this.rehydrateFromStorage()
-        }
-      })
+  private listeners = new Set<(state: AuthSnapshot) => void>()
+
+  subscribe(listener: (state: AuthSnapshot) => void) {
+    this.listeners.add(listener)
+
+    return () => {
+      this.listeners.delete(listener)
     }
   }
 
-  private persist() {
-    if (typeof window === "undefined") return
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state))
-      this.emit()
-    } catch {}
-  }
-
   private emit() {
-    for (const l of this.listeners) l(this.getSnapshot())
-  }
+    const snapshot = this.getSnapshot()
 
-  subscribe(listener: (s: AuthSnapshot) => void) {
-    this.listeners.add(listener)
-    return () => this.listeners.delete(listener)
+    for (const listener of this.listeners) {
+      listener(snapshot)
+    }
   }
 
   getSnapshot(): AuthSnapshot {
     return { ...this.state }
   }
 
-  setTokens(accessToken: string | null, refreshToken?: string | null) {
-    this.state.accessToken = accessToken ?? null
-    if (typeof refreshToken !== "undefined") this.state.refreshToken = refreshToken ?? null
-    this.persist()
+  hydrateFromStorage() {
+    if (typeof window === "undefined") return
+
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+
+      this.state = stored
+        ? JSON.parse(stored)
+        : {
+            accessToken: null,
+            refreshToken: null,
+            user: null,
+          }
+    } catch {
+      this.state = {
+        accessToken: null,
+        refreshToken: null,
+        user: null,
+      }
+    }
+
+    this.emit()
   }
 
-  setUser(user: User | null) {
-    this.state.user = user ?? null
+  setAuth(data: Partial<AuthSnapshot>) {
+    this.state = {
+      ...this.state,
+      ...data,
+    }
+
     this.persist()
   }
 
   clear() {
-    this.state = { accessToken: null, refreshToken: null, user: null }
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(STORAGE_KEY)
+    this.state = {
+      accessToken: null,
+      refreshToken: null,
+      user: null,
     }
+
+    localStorage.removeItem(STORAGE_KEY)
+
     this.emit()
   }
 
-  rehydrateFromStorage() {
-    if (typeof window === "undefined") return
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      this.state = raw ? JSON.parse(raw) : { accessToken: null, refreshToken: null, user: null }
-    } catch {
-      this.state = { accessToken: null, refreshToken: null, user: null }
-    }
+  private persist() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state))
     this.emit()
   }
-
-  get accessToken() { return this.state.accessToken }
-  get refreshToken() { return this.state.refreshToken }
-  get user() { return this.state.user }
 }
 
 export const authStore = new AuthStore()
-
-// helpers
-export const isAuthenticated = () => !!authStore.accessToken
-export const getAccessToken = () => authStore.accessToken
-export const getRefreshToken = () => authStore.refreshToken
-export const getCurrentUser = () => authStore.user
-
-export function setTokensAndUserFromToken(accessToken: string | null, refreshToken: string | null) {
-  authStore.setTokens(accessToken, refreshToken)
-  if (accessToken) {
-    const payload = decodeJwt(accessToken)
-    if (payload) {
-      const roles = getRolesFromPayload(payload)
-      const email = getEmailFromPayload(payload) ?? ""
-      const name = getNameFromPayload(payload) ?? email ?? ""
-      const id = payload.sub ?? payload.sid ?? email ?? name ?? crypto.randomUUID()
-      authStore.setUser({ id: String(id), email, name, phone: "", role: roles.join(",") })
-    }
-  }
-}

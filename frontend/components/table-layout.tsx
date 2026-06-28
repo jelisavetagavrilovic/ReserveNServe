@@ -1,6 +1,6 @@
 "use client"
 
-import type { Table } from "@/lib/types"
+import type { Table } from "@/lib/types/restaurant.types"
 import { cn } from "@/lib/utils"
 import { Users, MapPin, CheckCircle, XCircle } from "lucide-react"
 

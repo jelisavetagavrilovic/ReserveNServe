@@ -7,11 +7,31 @@ import { MenuContent } from "@/components/menu-content"
 import { YourOrder } from "@/components/order-content"
 import { Button } from "@/components/ui/button"
 import { format, parse } from "date-fns"
-import { Restaurant, MenuItem } from "@/lib/types"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem,} from "@/components/ui/select"
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"
-import { getRestaurantById, getMenuByRestaurant } from "@/lib/services/restaurant.service"
-import { createReservation, updateReservationOrders } from "@/lib/services/reservation.service"
+import type {
+  Restaurant,
+  MenuItem,
+} from "@/lib/services/restaurant.service"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  getRestaurantById,
+  getMenuByRestaurant,
+} from "@/lib/services/restaurant.service"
+import {
+  createReservation,
+  updateReservationOrders,
+} from "@/lib/services/reservation.service"
 import Loading from "@/components/loading"
 import {
   Clock,
@@ -21,9 +41,10 @@ import {
   ArrowLeft,
   Armchair,
 } from "lucide-react"
-import { ReservationRequest, ReservationResponse } from "@/lib/types/reservation.types"
-
-
+import type {
+  ReservationRequest,
+  ReservationResponse,
+} from "@/lib/types/reservation.types"
 
 export default function MenuPage() {
   const params = useParams()
@@ -39,39 +60,61 @@ export default function MenuPage() {
     selectedTable,
   } = useAppStore()
 
-  // state
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [servingTime, setServingTime] = useState("")
   const [loading, setLoading] = useState(true)
 
-  // fetch data
+
+  const generateServingSlots = (startTime: string) => {
+    const [hours, minutes] = startTime.split(":").map(Number)
+
+    const slots: string[] = []
+
+    for (let i = 0; i <= 4; i++) {
+      const totalMinutes = hours * 60 + minutes + i * 15
+
+      const h = Math.floor(totalMinutes / 60)
+      const m = totalMinutes % 60
+
+      slots.push(
+        `${h.toString().padStart(2, "0")}:${m
+          .toString()
+          .padStart(2, "0")}`
+      )
+    }
+
+    return slots
+  }
+
   useEffect(() => {
     if (!currentReservationRequest) return
-
-    console.log("[MenuPage] Current reservation request:", currentReservationRequest)
 
     const init = async () => {
       setLoading(true)
 
-      const [restaurantData, menuData] = await Promise.all([
-        getRestaurantById(currentReservationRequest.restaurantId),
-        getMenuByRestaurant(currentReservationRequest.restaurantId),
-      ])
+      try {
+        const [restaurantResponse, menuResponse] = await Promise.all([
+          getRestaurantById(currentReservationRequest.restaurantId),
+          getMenuByRestaurant(currentReservationRequest.restaurantId),
+        ])
 
-      setRestaurant(restaurantData ?? null)
-      setMenuItems(menuData)
-      setLoading(false)
+        setRestaurant(restaurantResponse?.restaurant ?? null)
+        setMenuItems(menuResponse.items)
+        const slots = generateServingSlots(
+          currentReservationRequest.startTime
+        )
 
-      console.log("[MenuPage] Fetched restaurant:", restaurantData)
-      console.log("[MenuPage] Fetched menu items:", menuData)
+        setAvailableSlots(slots)
+        setServingTime(currentReservationRequest.startTime)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    init()
+    void init()
   }, [currentReservationRequest])
-
-  if (loading) return <Loading />
-  if (!restaurant) return null
 
   if (!currentReservationRequest) {
     return (
@@ -86,83 +129,46 @@ export default function MenuPage() {
     )
   }
 
-  // helpers
-  const isWeekend = (date: Date) => {
-    const day = date.getDay()
-    return day === 0 || day === 6
-  }
+  if (loading) return <Loading />
+  if (!restaurant) return null
 
-  const generateServingTimes = () => {
-    //const [hours, minutes] = currentReservation.time.split(":").map(Number)
-    const [hours, minutes] = currentReservationRequest.startTime.split(":").map(Number)
-    const times: string[] = []
-
-    const closeTime = isWeekend(new Date(currentReservationRequest.date))
-      ? restaurant.closing_time_weekend
-      : restaurant.closing_time_workday
-
-    const [closeHour, closeMinute] = closeTime.split(":").map(Number)
-    const latestMinutes = closeHour * 60 + closeMinute - 30
-
-    for (let i = 0; i <= 8; i++) {
-      const totalMinutes = hours * 60 + minutes + i * 15
-      if (totalMinutes > latestMinutes) break
-
-      const h = Math.floor(totalMinutes / 60)
-      const m = totalMinutes % 60
-
-      times.push(
-        `${h.toString().padStart(2, "0")}:${m
-          .toString()
-          .padStart(2, "0")}`
-      )
-    }
-
-    return times
-  }
-
-  const servingTimes = generateServingTimes()
-
-  // checkout / confirmation
-  const handleProceedToCheckout = async () => {
-    if (!currentReservationRequest) return
-
-    // request object to send to backend
+  const handleProceed = async () => {
     const request: ReservationRequest = {
       ...currentReservationRequest,
-      orders: cart.map(item => ({
+      orders: cart.map((item) => ({
         menuItemId: item.id,
-        quantity: item.quantity
+        quantity: item.quantity,
       })),
-      servingTime: cart.length > 0 ? servingTime || currentReservationRequest.startTime : undefined,
+      servingTime:
+        cart.length > 0
+          ? servingTime || currentReservationRequest.startTime
+          : undefined,
     }
+
     setCurrentReservationRequest(request)
 
     let reservation: ReservationResponse | undefined
 
     if (currentReservationResponse) {
-      // update existing reservation
-      reservation = await updateReservationOrders(currentReservationResponse.id, request)
+      reservation = await updateReservationOrders(
+        currentReservationResponse.id,
+        request
+      )
+
       if (!reservation) {
         console.error("Failed to update reservation")
         return
       }
-      setCurrentReservationResponse(reservation)
-      console.log("[MenuPage] Updated reservation:", reservation)
     } else {
-      // create new reservation
       reservation = await createReservation(request)
-      setCurrentReservationResponse(reservation)
-      console.log("[MenuPage] Created reservation:", reservation)
     }
 
-    // redirect
-    if (reservation && reservation.status === "Confirmed") {
+    setCurrentReservationResponse(reservation)
+
+    if (reservation.status === "Confirmed") {
       router.push(`/confirmation?reservationId=${reservation.id}`)
-    } else if (reservation && reservation.status === "PendingPayment") {
+    } else if (reservation.status === "PendingPayment") {
       router.push("/checkout")
-    } else {
-      console.log("[MenuPage] Reservation failed:", reservation)
     }
   }
 
@@ -181,6 +187,7 @@ export default function MenuPage() {
         <h1 className="text-2xl md:text-3xl font-bold mb-2">
           Pre-order Your Meal
         </h1>
+
         <p className="text-muted-foreground mb-6">
           Select dishes and specify when you want them served
         </p>
@@ -191,18 +198,20 @@ export default function MenuPage() {
           </div>
 
           <div className="lg:col-span-1 sticky top-24 space-y-4">
-            {/* reservation details */}
+            {/* Reservation details */}
             <Card>
               <CardHeader className="pb-0">
                 <CardTitle className="text-base">
                   Reservation Details
                 </CardTitle>
               </CardHeader>
+
               <CardContent className="space-y-3 text-sm">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <span>{restaurant.name}</span>
                 </div>
+
                 <div className="flex items-center gap-2">
                   <CalendarDays className="h-4 w-4 text-muted-foreground" />
                   <span>
@@ -216,16 +225,19 @@ export default function MenuPage() {
                     )}
                   </span>
                 </div>
+
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  {/* <span>{currentReservation.time}</span> */}
                   <span>{currentReservationRequest.startTime}</span>
                 </div>
+
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  {/* <span>{currentReservation.partySize} guests</span> */}
-                  <span>{currentReservationRequest.guestNumber} guests</span>
+                  <span>
+                    {currentReservationRequest.guestNumber} guests
+                  </span>
                 </div>
+
                 {selectedTable && (
                   <div className="flex items-center gap-2">
                     <Armchair className="h-4 w-4 text-muted-foreground" />
@@ -237,34 +249,41 @@ export default function MenuPage() {
               </CardContent>
             </Card>
 
-            {/* serving time */}
+            {/* Serving time */}
             <Card>
               <CardHeader className="pb-0">
                 <CardTitle className="text-base">
                   When to Serve Food?
                 </CardTitle>
               </CardHeader>
+
               <CardContent>
                 <Select value={servingTime} onValueChange={setServingTime}>
                   <SelectTrigger>
                     <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
                     <SelectValue placeholder="Select serving time" />
                   </SelectTrigger>
+
                   <SelectContent>
-                    {servingTimes.map(time => (
-                      <SelectItem key={time} value={time}>
-                        {time}
+                    {availableSlots.map((slot) => (
+                      <SelectItem key={slot} value={slot}>
+                        {slot}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+
                 <p className="text-xs text-muted-foreground mt-2">
                   Food will be ready at this time to reduce your wait
                 </p>
               </CardContent>
             </Card>
 
-            <YourOrder onProceed={handleProceedToCheckout} />
+            {/* <YourOrder onProceed={handleProceedToCheckout} /> */}
+            <YourOrder
+              onProceed={handleProceed}
+              // disabled={!selectedTable || !date || !time}
+            />
           </div>
         </div>
       </div>
