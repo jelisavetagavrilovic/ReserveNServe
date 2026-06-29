@@ -1,0 +1,16 @@
+﻿IF DB_ID('Payment') IS NULL
+BEGIN
+    CREATE DATABASE Payment;
+END
+GO
+
+USE Payment
+GO
+
+IF OBJECT_ID('Payments', 'U') IS NULL
+CREATE TABLE Payments(
+	id INT NOT NULL PRIMARY KEY,
+	reservation_id INT NOT NULL,
+	amount DECIMAL NOT NULL
+);
+GO
