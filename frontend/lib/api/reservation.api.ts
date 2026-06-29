@@ -2,7 +2,6 @@ import type {
   ReservationRequest,
   ReservationResponse,
   OrderResponse,
-  PaymentRequest,
 } from "../types/reservation.types"
 
 const STORAGE_KEY = "reservations"
@@ -146,79 +145,45 @@ export async function sendConfirmationEmail(
     return false
   }
 }
+
 // export async function processPayment(
-//   reservationId: string
+//   request: PaymentRequest
 // ): Promise<ReservationResponse | undefined> {
 //   return new Promise((resolve, reject) => {
 //     setTimeout(async () => {
 //       const paymentSuccessful = true
 
 //       if (!paymentSuccessful) {
-//         await updateReservation(reservationId, {
+//         await updateReservation(request.reservationId, {
 //           status: "Failed",
 //         })
+
 //         reject(new Error("Payment failed"))
 //         return
 //       }
 
-//       const reservation = await getReservationById(reservationId)
+//       const reservation = await getReservationById(
+//         request.reservationId
+//       )
 
 //       if (!reservation) {
 //         reject(new Error("Reservation not found"))
 //         return
 //       }
 
-//       const emailSent = await sendConfirmationEmail(reservation)
+//       const emailSent = await sendConfirmationEmail(
+//         reservation
+//       )
 
-//       const updated = await updateReservation(reservationId, {
-//         status: "Confirmed",
-//         emailStatus: emailSent ? "Sent" : "Failed",
-//       })
+//       const updated = await updateReservation(
+//         request.reservationId,
+//         {
+//           status: "Confirmed",
+//           emailStatus: emailSent ? "Sent" : "Failed",
+//         }
+//       )
 
 //       resolve(updated)
 //     }, 2000)
 //   })
 // }
-
-
-export async function processPayment(
-  request: PaymentRequest
-): Promise<ReservationResponse | undefined> {
-  return new Promise((resolve, reject) => {
-    setTimeout(async () => {
-      const paymentSuccessful = true
-
-      if (!paymentSuccessful) {
-        await updateReservation(request.reservationId, {
-          status: "Failed",
-        })
-
-        reject(new Error("Payment failed"))
-        return
-      }
-
-      const reservation = await getReservationById(
-        request.reservationId
-      )
-
-      if (!reservation) {
-        reject(new Error("Reservation not found"))
-        return
-      }
-
-      const emailSent = await sendConfirmationEmail(
-        reservation
-      )
-
-      const updated = await updateReservation(
-        request.reservationId,
-        {
-          status: "Confirmed",
-          emailStatus: emailSent ? "Sent" : "Failed",
-        }
-      )
-
-      resolve(updated)
-    }, 2000)
-  })
-}

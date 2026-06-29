@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Plus } from "lucide-react"
 import { useAuth } from "@/auth/hooks/useAuth"
 import { getReservationsForUser, cancelReservation } from "@/lib/services/reservation.service"
+import { refundPayment } from "@/lib/services/payment.service"
 import { ReservationResponse } from "@/lib/types/reservation.types"
 import { parse, isPast } from "date-fns"
 import { BookingCard } from "@/components/booking-card"
@@ -75,13 +76,22 @@ export default function BookingsPage() {
     return isPast(reservationDateTime) && r.status !== "Cancelled"
   })
 
-  const handleCancelReservation = async (id: string) => {
+  const handleCancelReservation = async (
+    reservation: ReservationResponse
+  ) => {
     try {
-      await cancelReservation(id) 
+      const isPaidReservation =
+        reservation.status === "Confirmed" &&
+        reservation.totalAmount > 0
 
-      // refresh frontend after cancel reservation
+      if (isPaidReservation) {
+        await refundPayment(reservation.id)
+      } else {
+        await cancelReservation(reservation.id)
+      }
+
       setReservations((prev) =>
-        prev?.filter((reservation) => reservation.id !== id) ?? []
+        prev?.filter((r) => r.id !== reservation.id) ?? []
       )
     } catch (error) {
       console.error("Failed to cancel reservation:", error)
@@ -110,15 +120,23 @@ export default function BookingsPage() {
           </TabsList>
 
           <TabsContent value="upcoming" className="space-y-4">
-            {upcomingBookings.length > 0
-              ? upcomingBookings.map((r) => 
-                <BookingCard 
-                  key={r.id} 
-                  reservation={r} 
-                  showActions 
-                  onCancel={handleCancelReservation}
-                />)
-              : <EmptyState title="No Upcoming Reservations" subtitle="Ready to book your next table?" />}
+            {upcomingBookings.length > 0 ? (
+              upcomingBookings.map((reservation) => (
+                <BookingCard
+                  key={reservation.id}
+                  reservation={reservation}
+                  showActions
+                  onCancel={() =>
+                    handleCancelReservation(reservation)
+                  }
+                />
+              ))
+            ) : (
+              <EmptyState
+                title="No Upcoming Reservations"
+                subtitle="Ready to book your next table?"
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="past" className="space-y-4">
@@ -126,7 +144,7 @@ export default function BookingsPage() {
               ? pastBookings.map((r) => 
                 <BookingCard key={r.id} reservation={r} />)
               : <EmptyState title="No Past Reservations" subtitle="Your completed bookings will appear here" />}
-          </TabsContent>
+          </TabsContent> 
         </Tabs>
       </div>
     </div>

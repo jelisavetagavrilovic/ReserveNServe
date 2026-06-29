@@ -52,14 +52,3 @@ export type OrderResponse = {
   quantity: number
   total: number
 }
-
-export type PaymentRequest = {
-  reservationId: string
-  amount: number
-  card: {
-    holderName: string
-    cardNumber: string
-    expiry: string
-    cvc: string
-  }
-}
