@@ -1,3 +1,5 @@
+import { PaginatedResponse } from "./pagination.types"
+
 // restaurants
 export type Restaurant = {
   id: number
@@ -12,21 +14,23 @@ export type Restaurant = {
   closing_time_weekend: string
   rating: number
   price_range: string
-  cusine_type: string
+  cuisine_type: string
   reservation_duration: string
   image: string
 }
 
 export type RestaurantQueryRequest = {
   search?: string
-  cuisine?: string
+  cuisine_type?: string
   price?: string
   sortBy?: "rating" | "name"
+
+  page?: number
+  pageSize?: number
 }
 
-export type RestaurantListResponse = {
-  restaurants: Restaurant[]
-}
+export type RestaurantListResponse =
+  PaginatedResponse<Restaurant>
 
 export type RestaurantDetailsResponse = {
   restaurant: Restaurant

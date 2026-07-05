@@ -1,3 +1,5 @@
+import type { PaginatedResponse } from "./pagination.types"
+
 export type ReservationStatus =
   | "Pending"
   | "Confirmed"
@@ -11,6 +13,10 @@ export type EmailStatus =
   | "Sent"
   | "Failed"
 
+export type ReservationType =
+  | "upcoming"
+  | "past"
+
 export type ReservationRequest = {
   restaurantId: number
   tableGroupId: number
@@ -19,6 +25,13 @@ export type ReservationRequest = {
   guestNumber: number
   orders: OrderRequest[]
   servingTime?: string
+}
+
+export type ReservationQueryRequest = {
+  page?: number
+  pageSize?: number
+  type?: ReservationType
+  status?: ReservationStatus
 }
 
 export type OrderRequest = {
@@ -44,6 +57,10 @@ export type ReservationResponse = {
   status: ReservationStatus
   emailStatus: EmailStatus
 }
+
+export type ReservationListResponse =
+  PaginatedResponse<ReservationResponse>
+
 
 export type OrderResponse = {
   menuItemId: number

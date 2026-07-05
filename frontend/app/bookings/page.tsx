@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Plus } from "lucide-react"
+import { Calendar, ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { useAuth } from "@/auth/hooks/useAuth"
 import { getReservationsForUser, cancelReservation } from "@/lib/services/reservation.service"
 import { refundPayment } from "@/lib/services/payment.service"
@@ -36,6 +36,38 @@ export default function BookingsPage() {
   const [reservations, setReservations] = useState<ReservationResponse[] | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming")
+  const [upcomingPage, setUpcomingPage] = useState(1)
+  const [pastPage, setPastPage] = useState(1)
+  const [upcomingTotalPages, setUpcomingTotalPages] = useState(1)
+  const [pastTotalPages, setPastTotalPages] = useState(1)
+
+  const loadReservations = async () => {
+    setLoading(true)
+
+    const page =
+      activeTab === "upcoming"
+        ? upcomingPage
+        : pastPage
+
+    const response =
+      await getReservationsForUser({
+        page,
+        pageSize: 5,
+        type: activeTab,
+      })
+
+    setReservations(response.items)
+
+    if (activeTab === "upcoming") {
+      setUpcomingTotalPages(response.totalPages)
+    } else {
+      setPastTotalPages(response.totalPages)
+    }
+
+    setLoading(false)
+  }
+
   useEffect(() => {
     if (!isAuthenticated) {
       router.replace("/login")
@@ -44,15 +76,14 @@ export default function BookingsPage() {
 
     if (!user) return
 
-    const init = async () => {
-      setLoading(true)
-      const data = await getReservationsForUser()
-      setReservations(data || [])
-      setLoading(false)
-    }
-
-    void init()
-  }, [isAuthenticated, router, user])
+    void loadReservations()
+  }, [
+    isAuthenticated,
+    user,
+    activeTab,
+    upcomingPage,
+    pastPage,
+  ])
 
   if (!isAuthenticated) {
     return null
@@ -65,16 +96,6 @@ export default function BookingsPage() {
       </div>
     )
   }
-
-  const upcomingBookings = reservations.filter((r) => {
-    const reservationDateTime = parse(`${r.date} ${r.startTime}`, "yyyy-MM-dd HH:mm", new Date())
-    return !isPast(reservationDateTime) && r.status !== "Cancelled"
-  })
-
-  const pastBookings = reservations.filter((r) => {
-    const reservationDateTime = parse(`${r.date} ${r.startTime}`, "yyyy-MM-dd HH:mm", new Date())
-    return isPast(reservationDateTime) && r.status !== "Cancelled"
-  })
 
   const handleCancelReservation = async (
     reservation: ReservationResponse
@@ -98,6 +119,16 @@ export default function BookingsPage() {
     }
   }
 
+  const currentPage =
+    activeTab === "upcoming"
+      ? upcomingPage
+      : pastPage
+
+  const currentTotalPages =
+    activeTab === "upcoming"
+      ? upcomingTotalPages
+      : pastTotalPages
+
   return (
     <div className="min-h-screen py-6">
       <div className="container mx-auto px-4 max-w-4xl">
@@ -113,39 +144,87 @@ export default function BookingsPage() {
           </Link>
         </div>
 
-        <Tabs defaultValue="upcoming">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) =>
+            setActiveTab(value as "upcoming" | "past")
+          }
+        >
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
             <TabsTrigger value="past">Past Bookings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="upcoming" className="space-y-4">
-            {upcomingBookings.length > 0 ? (
-              upcomingBookings.map((reservation) => (
-                <BookingCard
-                  key={reservation.id}
-                  reservation={reservation}
-                  showActions
-                  onCancel={() =>
-                    handleCancelReservation(reservation)
-                  }
+              {reservations.length > 0 ? (
+                reservations.map((reservation) => (
+                  <BookingCard
+                    key={reservation.id}
+                    reservation={reservation}
+                    showActions
+                    onCancel={() =>
+                      handleCancelReservation(reservation)
+                    }
+                  />
+                ))
+              ) : (
+                <EmptyState
+                  title="No Upcoming Reservations"
+                  subtitle="Ready to book your next table?"
                 />
-              ))
-            ) : (
-              <EmptyState
-                title="No Upcoming Reservations"
-                subtitle="Ready to book your next table?"
-              />
-            )}
+              )}
           </TabsContent>
 
           <TabsContent value="past" className="space-y-4">
-            {pastBookings.length > 0
-              ? pastBookings.map((r) => 
-                <BookingCard key={r.id} reservation={r} />)
-              : <EmptyState title="No Past Reservations" subtitle="Your completed bookings will appear here" />}
+              {reservations.length > 0 ? (
+                reservations.map((reservation) => (
+                  <BookingCard
+                    key={reservation.id}
+                    reservation={reservation}
+                  />
+                ))
+              ) : (
+                <EmptyState
+                  title="No Past Reservations"
+                  subtitle="Your completed bookings will appear here"
+                />
+              )}
           </TabsContent> 
         </Tabs>
+
+        {currentTotalPages > 1 && (
+          <div className="flex justify-center items-center gap-4 mt-8">
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={currentPage === 1}
+              onClick={() =>
+                activeTab === "upcoming"
+                  ? setUpcomingPage((prev) => prev - 1)
+                  : setPastPage((prev) => prev - 1)
+              }
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <span className="text-sm font-medium">
+              {currentPage} / {currentTotalPages}
+            </span>
+
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={currentPage === currentTotalPages}
+              onClick={() =>
+                activeTab === "upcoming"
+                  ? setUpcomingPage((prev) => prev + 1)
+                  : setPastPage((prev) => prev + 1)
+              }
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

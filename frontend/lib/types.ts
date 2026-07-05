@@ -19,7 +19,7 @@ export interface Restaurant {
   closing_time_weekend: string
   rating: number
   price_range: string
-  cusine_type: string
+  cuisine_type: string
   reservation_duration: string // "HH:MM:SS" format
   image: string
 }

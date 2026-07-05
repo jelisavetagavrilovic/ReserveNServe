@@ -28,14 +28,14 @@ export async function getRestaurants(
     results = results.filter(
       (restaurant) =>
         restaurant.name.toLowerCase().includes(q) ||
-        restaurant.cusine_type.toLowerCase().includes(q) ||
+        restaurant.cuisine_type.toLowerCase().includes(q) ||
         restaurant.description.toLowerCase().includes(q)
     )
   }
 
-  if (query?.cuisine && query.cuisine !== "all") {
+  if (query?.cuisine_type && query.cuisine_type !== "all") {
     results = results.filter(
-      (restaurant) => restaurant.cusine_type === query.cuisine
+      (restaurant) => restaurant.cuisine_type === query.cuisine_type
     )
   }
 
@@ -53,8 +53,35 @@ export async function getRestaurants(
     results.sort((a, b) => a.name.localeCompare(b.name))
   }
 
+  const page = query?.page ?? 1
+  const pageSize = query?.pageSize ?? 6
+
+  const totalCount = results.length
+  const totalPages = Math.ceil(
+    totalCount / pageSize
+  )
+
+  const start = (page - 1) * pageSize
+  const paginatedItems = results.slice(
+    start,
+    start + pageSize
+  )
+
+  // return new Promise((resolve) =>
+  //   setTimeout(() => resolve({ restaurants: results }), 300)
+  // )
   return new Promise((resolve) =>
-    setTimeout(() => resolve({ restaurants: results }), 300)
+    setTimeout(
+      () =>
+        resolve({
+          items: paginatedItems,
+          page,
+          pageSize,
+          totalCount,
+          totalPages,
+        }),
+      300
+    )
   )
 }
 
@@ -107,7 +134,7 @@ export async function getMenuByRestaurant(
 
 export async function getRestaurantFilters(): Promise<RestaurantFiltersResponse> {
   const cuisines = Array.from(
-    new Set(mockRestaurants.map((restaurant) => restaurant.cusine_type))
+    new Set(mockRestaurants.map((restaurant) => restaurant.cuisine_type))
   )
 
   const rangePrices = Array.from(
