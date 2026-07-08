@@ -10,8 +10,8 @@ using Reservations.Infrastructure.DatabaseContext;
 
 namespace Reservations.Infrastructure.Migrations
 {
-    [DbContext(typeof(ReservationDbContext))]
-    partial class ReservationDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(ReservationsDbContext))]
+    partial class ReservationsDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -38,7 +38,8 @@ namespace Reservations.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Price")
-                        .HasColumnType("numeric");
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
@@ -74,14 +75,16 @@ namespace Reservations.Infrastructure.Migrations
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int>("TableGroupId")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("TotalAmount")
-                        .HasColumnType("numeric");
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");

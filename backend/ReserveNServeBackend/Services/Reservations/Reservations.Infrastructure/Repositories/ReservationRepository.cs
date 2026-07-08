@@ -7,9 +7,9 @@ namespace Reservations.Infrastructure.Repositories;
 
 public class ReservationRepository : IReservationRepository
 {
-    private readonly ReservationDbContext _context;
+    private readonly ReservationsDbContext _context;
 
-    public ReservationRepository(ReservationDbContext context)
+    public ReservationRepository(ReservationsDbContext context)
     {
         _context = context;
     }

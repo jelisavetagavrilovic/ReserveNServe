@@ -21,11 +21,11 @@ namespace Reservations.Infrastructure.Migrations
                     RestaurantId = table.Column<int>(type: "integer", nullable: false),
                     TableGroupId = table.Column<int>(type: "integer", nullable: false),
                     StartTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    DurationMinutes = table.Column<int>(type: "integer", nullable: false),
                     GuestNumber = table.Column<int>(type: "integer", nullable: false),
+                    DurationMinutes = table.Column<int>(type: "integer", nullable: false),
                     ServingTime = table.Column<TimeSpan>(type: "interval", nullable: true),
-                    TotalAmount = table.Column<decimal>(type: "numeric", nullable: false),
-                    Status = table.Column<int>(type: "integer", nullable: false)
+                    TotalAmount = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
+                    Status = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -41,7 +41,7 @@ namespace Reservations.Infrastructure.Migrations
                     ReservationId = table.Column<Guid>(type: "uuid", nullable: false),
                     MenuItemId = table.Column<int>(type: "integer", nullable: false),
                     FoodName = table.Column<string>(type: "text", nullable: false),
-                    Price = table.Column<decimal>(type: "numeric", nullable: false),
+                    Price = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>

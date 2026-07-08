@@ -1,3 +1,7 @@
+// Application entry point.
+// Configures dependency injection, database context,
+// application services, middleware, and API endpoints.
+
 using Microsoft.EntityFrameworkCore;
 using Reservations.Application.Handlers;
 using Reservations.Application.Interfaces;
@@ -5,16 +9,27 @@ using Reservations.Infrastructure.DatabaseContext;
 using Reservations.Infrastructure.Repositories;
 using Reservations.Infrastructure.Services;
 
+using DotNetEnv;
+
+Env.Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
+var connectionString =
+    $"Host={Environment.GetEnvironmentVariable("DB_HOST")};" +
+    $"Port={Environment.GetEnvironmentVariable("DB_PORT")};" +
+    $"Database={Environment.GetEnvironmentVariable("DB_NAME")};" +
+    $"Username={Environment.GetEnvironmentVariable("DB_USER")};" +
+    $"Password={Environment.GetEnvironmentVariable("DB_PASSWORD")};";
+
+
 // Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 
-builder.Services.AddDbContext<ReservationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<ReservationsDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IUserContextService, UserContextService>();
@@ -27,8 +42,16 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<ReservationDbContext>();
-    db.Database.Migrate(); // ovo primenjuje sve migracije pri pokretanju
+    var db = scope.ServiceProvider.GetRequiredService<ReservationsDbContext>();
+
+    try
+    {
+        db.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Database migration failed: {ex.Message}");
+    }
 }
 
 // Configure the HTTP request pipeline.
