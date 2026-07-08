@@ -1,22 +1,11 @@
-// namespace Reservations.Domain.ValueObjects;
-//
-// public enum ReservationStatus
-// {
-//     Pending,
-//     Confirmed,
-//     PendingPayment,
-//     Cancelled,
-//     Completed,
-//     Failed
-// }
-
-namespace Reservations.Domain.ValueObjects;
-
 /// <summary>
 /// Represents the current lifecycle state of a reservation.
 /// The status changes based on reservation actions such as
 /// confirmation, payment, cancellation, and completion.
 /// </summary>
+/// 
+namespace Reservations.Domain.ValueObjects;
+
 public enum ReservationStatus
 {
     /// <summary>
