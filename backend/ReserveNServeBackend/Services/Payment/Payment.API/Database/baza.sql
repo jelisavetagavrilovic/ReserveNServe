@@ -9,8 +9,8 @@ GO
 
 IF OBJECT_ID('Payments', 'U') IS NULL
 CREATE TABLE Payments(
-	id INT NOT NULL PRIMARY KEY,
-	reservation_id INT NOT NULL,
-	amount DECIMAL NOT NULL
+	id INT IDENTITY(1,1) PRIMARY KEY,
+	reservation_id VARCHAR(255) NOT NULL,
+	charge_id VARCHAR(255) NOT NULL
 );
 GO
