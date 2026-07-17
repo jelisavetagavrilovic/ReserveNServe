@@ -4,6 +4,6 @@
     {
         public int id { get; set; }
         public string reservation_id { get; set; }
-        public string charge_id { get; set; }
+        public string payment_intent { get; set; }
     }
 }

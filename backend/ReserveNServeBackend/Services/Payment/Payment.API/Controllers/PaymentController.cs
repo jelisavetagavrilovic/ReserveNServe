@@ -49,7 +49,7 @@ namespace Payment.API.Controllers
                 Entities.Payment payment = new Entities.Payment
                 {
                     reservation_id = request.ReservationId,
-                    charge_id = paymentIntent.Id,
+                    payment_intent = paymentIntent.Id,
                 };
 
                 _paymentHandler.InsertNewPaymentAsync(payment);
@@ -84,7 +84,7 @@ namespace Payment.API.Controllers
             var refundService = new RefundService();
             var options = new RefundCreateOptions
             {
-                Charge = payment.charge_id,
+                PaymentIntent = payment.payment_intent,
             };
 
             try
