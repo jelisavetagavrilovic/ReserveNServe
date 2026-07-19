@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Reservations.Infrastructure.DatabaseContext;
@@ -11,9 +12,11 @@ using Reservations.Infrastructure.DatabaseContext;
 namespace Reservations.Infrastructure.Migrations
 {
     [DbContext(typeof(ReservationsDbContext))]
-    partial class ReservationsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260717192031_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -3,11 +3,11 @@
 // application services, middleware, and API endpoints.
 
 using Microsoft.EntityFrameworkCore;
-using Reservations.Application.Handlers;
 using Reservations.Application.Interfaces;
+using Reservations.Application.Services;
 using Reservations.Infrastructure.DatabaseContext;
 using Reservations.Infrastructure.Repositories;
-using Reservations.Infrastructure.Services;
+using Reservations.Infrastructure.Clients;
 
 using DotNetEnv;
 
@@ -22,9 +22,8 @@ var connectionString =
     $"Username={Environment.GetEnvironmentVariable("DB_USER")};" +
     $"Password={Environment.GetEnvironmentVariable("DB_PASSWORD")};";
 
-
 // Add services to the container.
-builder.Services.AddOpenApi();
+builder.Services.AddSwaggerGen();
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 
@@ -32,10 +31,10 @@ builder.Services.AddDbContext<ReservationsDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
-builder.Services.AddScoped<IUserContextService, UserContextService>();
-builder.Services.AddScoped<IRestaurantService, RestaurantService>(); 
-
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<CreateReservationHandler>());
+builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddScoped<IRestaurantClient, RestaurantClient>();
+builder.Services.AddScoped<IPaymentClient, PaymentClient>();
+builder.Services.AddScoped<INotificationClient, NotificationClient>();
 
 
 var app = builder.Build();
@@ -57,7 +56,8 @@ using (var scope = app.Services.CreateScope())
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();

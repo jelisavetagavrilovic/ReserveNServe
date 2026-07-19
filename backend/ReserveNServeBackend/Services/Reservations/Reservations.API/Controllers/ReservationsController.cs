@@ -1,8 +1,11 @@
-using MediatR;
+/// <summary>
+/// API controller responsible for managing restaurant reservations.
+/// Provides endpoints for creating, retrieving, updating and cancelling reservations.
+/// </summary>
+
 using Microsoft.AspNetCore.Mvc;
-using Reservations.Application.Commands;
-using Reservations.Application.DTOs;
-using Reservations.Application.Queries;
+using Reservations.Application.DTOs.Requests;
+using Reservations.Application.Interfaces;
 
 namespace Reservations.API.Controllers;
 
@@ -10,96 +13,99 @@ namespace Reservations.API.Controllers;
 [Route("api/[controller]")]
 public class ReservationsController : ControllerBase
 {
-    private readonly IMediator _mediator;
-    
-    public  ReservationsController(IMediator mediator)
+    private readonly IReservationService _reservationService;
+
+    public ReservationsController(
+        IReservationService reservationService)
     {
-        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _reservationService = reservationService;
     }
 
-    // create new reservation
+
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] ReservationDto dto)
+    public async Task<IActionResult> CreateReservation(
+        CreateReservationRequest request)
     {
-        var command = new CreateReservationCommand
-        {
-            RestaurantId = dto.RestaurantId,
-            TableGroupId = dto.TableGroupId,
-            Date = dto.Date,
-            StartTime = dto.StartTime,
-            GuestNumber = dto.GuestNumber,
-            ServingTime = dto.ServingTime,
-            Orders = dto.Orders
-        };
+        var userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-        var result = await _mediator.Send(command);
-        return result.Success ? Ok(result) : Conflict(result);
-    }
-    
-    // get reservation by id
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(Guid id)
-    {
-        var result = await _mediator.Send(new GetReservationByIdQuery { ReservationId = id });
-
-        if (result == null)
-            return NotFound(new { message = "Reservation not found." });
+        var result = await _reservationService
+            .CreateReservationAsync(userId, request);
 
         return Ok(result);
     }
-    
-    // update reservation
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, UpdateReservationCommand command)
+
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetReservation(
+        Guid id)
     {
-        if (id != command.Id)
-            return BadRequest(new { message = "Id mismatch" });
+        var userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-        var result = await _mediator.Send(command);
-
-        if (!result.Success)
-            return Conflict(result);
-        
-        return Ok(result);
-    }
-    
-    // cancel reservation
-    [HttpPatch("{id}/cancel")]
-    public async Task<IActionResult> CancelReservation(Guid id)
-    {
-        var result = await _mediator.Send(new CancelReservationCommand(id));
-
-        if (!result.Success)
-            return BadRequest(result);
+        var result = await _reservationService
+            .GetReservationByIdAsync(id, userId);
 
         return Ok(result);
     }
-    
-    // get reservations by user
+
+
     [HttpGet]
-    public async Task<IActionResult> GetMyReservations()
+    public async Task<IActionResult> GetUserReservations(
+        [FromQuery] ReservationQueryRequest request)
     {
-        var result = await _mediator.Send(new GetReservationsByUserQuery());
+        var userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        var result = await _reservationService
+            .GetUserReservationsAsync(userId, request);
+
         return Ok(result);
     }
-    
-    // get availability for tables
-    [HttpGet("{restaurantId}/available-tables")]
-    public async Task<IActionResult> GetAvailableTables(
-        int restaurantId,
-        [FromQuery] string date,
-        [FromQuery] string time,
-        [FromQuery] int guestNumber = 1)
-    {
-        var query = new GetTablesWithAvailabilityQuery()
-        {
-            RestaurantId = restaurantId,
-            Date = date,
-            Time = time,
-            GuestNumber = guestNumber
-        };
 
-        var result = await _mediator.Send(query);
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> UpdateReservation(
+        Guid id,
+        UpdateReservationRequest request)
+    {
+        var userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        var result = await _reservationService
+            .UpdateReservationAsync(
+                id,
+                userId,
+                request);
+
         return Ok(result);
+    }
+
+
+    [HttpPut("{id:guid}/orders")]
+    public async Task<IActionResult> ReplaceOrders(
+        Guid id,
+        UpdateReservationOrdersRequest request)
+    {
+        var userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        var result = await _reservationService
+            .ReplaceOrdersAsync(
+                id,
+                userId,
+                request);
+
+        return Ok(result);
+    }
+
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> CancelReservation(
+        Guid id)
+    {
+        var userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        await _reservationService
+            .CancelReservationAsync(
+                id,
+                userId);
+
+        return NoContent();
     }
 }
