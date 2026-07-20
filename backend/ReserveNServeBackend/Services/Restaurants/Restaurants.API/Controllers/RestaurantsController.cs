@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+﻿using Azure.Core;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Restaurants.API.DTOs;
+using Restaurants.API.DTOs.Requests;
+using Restaurants.API.DTOs.Responses;
 using Restaurants.API.Entities;
 using Restaurants.API.Handler;
 using Restaurants.API.Repositories;
@@ -18,56 +21,81 @@ namespace Restaurants.API.Controllers
         }
 
         [HttpGet("GetRestaurants")]
-        public async Task<ActionResult<IEnumerable<Restaurant>>> GetRestaurants()
+        public async Task<ActionResult<IEnumerable<RestaurantDTO>>> GetRestaurantsAsync(GetRestaurantsRequest request)
         {
-            var restaurants = await _restaurantsHandler.GetRestaurantsAsync();
-            return Ok(restaurants);
-        }
-
-        [HttpGet("GetTablesForRestaurant/{id}")]
-        public async Task<ActionResult<IEnumerable<TableDTO>>> GetTablesForRestaurant(int id)
-        {
-            var tables = await _restaurantsHandler.GetTablesForRestaurantAsync(id);
-            if (tables == null)
+            var getRestaurantsDTOs = await _restaurantsHandler.GetRestaurantsAsync(request);
+            if(getRestaurantsDTOs == null)
             {
                 return NotFound();
             }
-            return Ok(tables);
+            return Ok(getRestaurantsDTOs);
         }
 
-        [HttpGet("GetImage/{id}")]
-        public async Task<IActionResult> GetImage(int id)
+        [HttpGet("GetRestaurants/{id}")]
+        public async Task<ActionResult<RestaurantDTO>> GetRestaurantByIdAsync(int id)
         {
-            var image = await _restaurantsHandler.GetImageAsync(id);
-            if (image == null)
+            var getRestaurantsDTO = await _restaurantsHandler.GetRestaurantByIdAsync(id);
+            if (getRestaurantsDTO == null)
             {
                 return NotFound();
             }
-            return File(image, "image/jpeg");
+            
+            return Ok(getRestaurantsDTO);
         }
 
-        [HttpPost("GetMenuItemsForRestaurant")]
-        public async Task<ActionResult<IEnumerable<MenuItemDTO>>> GetMenuItemsForRestaurant(GetMenuItemsRequest request)
+        [HttpGet("GetRestaurantInfo/{id}")]
+        public async Task<ActionResult<GetRestaurantInfoResponse>> GetRestaurantInfoAsync(int id)
         {
-            var menuItems = await _restaurantsHandler.GetMenuItemsAsync(request.ids);
-            return Ok(menuItems);
+            var restaurantInfo = await _restaurantsHandler.GetRestaurantInfoAsync(id);
+            if (restaurantInfo == null)
+            {
+                return NotFound();
+            }
+            return Ok(restaurantInfo);
         }
 
         [HttpGet("GetTable/{id}")]
-        public async Task<ActionResult<Table>> GetTable(int id)
+        public async Task<ActionResult<TableDTO>> GetTableAsync(int id)
         {
             var table = await _restaurantsHandler.GetTableAsync(id);
-            if(table == null)
+            if (table == null)
             {
                 return NotFound();
             }
             return Ok(table);
         }
 
-        [HttpGet("GetReservationDuration/{id}")]
-        public async Task<ActionResult<ReservationDurationDTO>> GetReservationDuration(int id)
+        [HttpGet("GetMenuForRestaurant/{id}")]
+        public async Task<ActionResult<IEnumerable<MenuItemDTO>>> GetMenuForRestaurant(int id)
         {
-            return Ok(await _restaurantsHandler.GetReservationDurationAsync(id));
+            var menuItems = await _restaurantsHandler.GetMenuForRestaurantAsync(id);
+            if(menuItems == null)
+            {
+                return NotFound();
+            }
+            return Ok(menuItems);
+        }
+
+        [HttpGet("GetMenuItemsForRestaurant/{id}")]
+        public async Task<ActionResult<IEnumerable<GetMenuItemsForRestaurantResponse>>> GetMenuItemsForRestaurant(int id)
+        {
+            var menuItems = await _restaurantsHandler.GetMenuItemsForRestaurantAsync(id);
+            if (menuItems == null)
+            {
+                return NotFound();
+            }
+            return Ok(menuItems);
+        }
+
+        [HttpGet("GetRestaurantsFilters")]
+        public async Task<ActionResult<IEnumerable<GetRestaurantsFiltersResponse>>> GetRestaurantsFilters()
+        {
+            var filters = await _restaurantsHandler.GetRestaurantsFiltersAsync();
+            if (filters == null)
+            {
+                return NotFound();
+            }
+            return Ok(filters);
         }
     }
 }

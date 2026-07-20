@@ -9,6 +9,7 @@ namespace Restaurants.API.Data
         public DbSet<Restaurant> Restaurants { get; set; } = null!;
         public DbSet<Table> Tables { get; set; } = null!;
         public DbSet<MenuItem> MenuItems { get; set; } = null!;
+        public DbSet<Cuisines> Cuisines { get; set; } = null!;
 
         public RestaurantsContext(DbContextOptions<RestaurantsContext> options) : base(options)
         {

@@ -1,6 +1,6 @@
-﻿namespace Restaurants.API.Entities
+﻿namespace Restaurants.API.DTOs.Responses
 {
-    public class Restaurant
+    public class RestaurantDTO
     {
         public int id { get; set; }
         public string name { get; set; }
@@ -12,8 +12,8 @@
         public TimeOnly closing_time { get; set; }
         public double rating { get; set; }
         public string price { get; set; }
-        public int cuisine_type { get; set; }
+        public string cuisine_type { get; set; }
         public int reservation_duration { get; set; }
-        public byte[]? image { get; set; }
+        public string? image { get; set; }
     }
 }
