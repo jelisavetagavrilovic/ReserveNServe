@@ -4,15 +4,21 @@ export {
   createReservation,
   updateReservation,
   updateReservationOrders,
+  startReservationPayment,
   deleteReservation,
   cancelReservation,
 } from "../api/reservation.api"
 
+
 export type {
   ReservationRequest,
   ReservationResponse,
+  ReservationQueryRequest,
+  ReservationListResponse,
+  UpdateReservationOrdersRequest,
+  StartPaymentResponse,
   OrderRequest,
   OrderResponse,
   ReservationStatus,
-  EmailStatus,
+  ReservationPaymentStatus,
 } from "../types/reservation.types"

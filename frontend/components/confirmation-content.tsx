@@ -71,7 +71,7 @@ export function ConfirmationContent() {
           mode="confirmation"
         />
 
-        <Card className="bg-muted/50 mb-6 mt-6">
+        {/* <Card className="bg-muted/50 mb-6 mt-6">
           <CardContent className="pt-4">
             <div className="flex items-start gap-2.5">
               <Mail className="h-5 w-5 text-primary mt-0.5" />
@@ -106,7 +106,7 @@ export function ConfirmationContent() {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <div className="flex flex-col sm:flex-row gap-4">
           <Link href="/bookings" className="flex-1">

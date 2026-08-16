@@ -1,11 +1,7 @@
-import {
-  createPaymentIntent,
-  confirmPayment,
-  refundPayment
+export {
+  confirmMockPayment,
+  failMockPayment,
+  completeMockRefund,
+  failMockRefund,
 } from "../api/payment.api"
 
-export {
-  createPaymentIntent,
-  confirmPayment,
-  refundPayment,
-}

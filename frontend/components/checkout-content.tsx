@@ -12,7 +12,6 @@ import Loading from "./loading"
 
 export function CheckoutContent() {
   const router = useRouter()
-  const isClient = typeof window !== "undefined"
 
   const { currentReservationRequest, currentReservationResponse } = useAppStore()
 
