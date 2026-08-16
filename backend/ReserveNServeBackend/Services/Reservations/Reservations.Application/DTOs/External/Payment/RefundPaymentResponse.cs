@@ -1,8 +1,6 @@
 namespace Reservations.Application.DTOs.External.Payment;
 
-public class CreatePaymentResponse
+public class RefundPaymentResponse
 {
-    public string ClientSecret { get; set; } = string.Empty;
-
     public PaymentStatus Status { get; set; }
 }

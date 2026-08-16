@@ -8,6 +8,8 @@ using Reservations.Application.Services;
 using Reservations.Infrastructure.DatabaseContext;
 using Reservations.Infrastructure.Repositories;
 using Reservations.Infrastructure.Clients;
+using Reservations.API.Middleware;
+using System.Text.Json.Serialization;
 
 using DotNetEnv;
 
@@ -25,7 +27,15 @@ var connectionString =
 // Add services to the container.
 builder.Services.AddSwaggerGen();
 builder.Services.AddAuthorization();
-builder.Services.AddControllers();
+
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter());
+    });
+// builder.Services.AddControllers();
 
 builder.Services.AddDbContext<ReservationsDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -61,7 +71,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseAuthorization();
-app.MapControllers();   
+app.MapControllers();  
 
 app.Run();

@@ -69,6 +69,9 @@ namespace Reservations.Infrastructure.Migrations
                     b.Property<int>("GuestNumber")
                         .HasColumnType("integer");
 
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("integer");
+
                     b.Property<int>("RestaurantId")
                         .HasColumnType("integer");
 

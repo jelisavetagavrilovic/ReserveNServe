@@ -1,10 +1,9 @@
-
 using Reservations.Application.Common.Pagination;
+using Reservations.Application.DTOs.External.Payment;
 using Reservations.Application.DTOs.Requests;
 using Reservations.Application.DTOs.Responses;
 
 namespace Reservations.Application.Interfaces;
-
 
 public interface IReservationService
 {
@@ -25,21 +24,19 @@ public interface IReservationService
         Guid userId,
         UpdateReservationRequest request);
 
-    Task<ReservationResponse> ReplaceOrdersAsync(
+    Task<ReservationResponse> UpdateOrdersAsync(
         Guid reservationId,
         Guid userId,
         UpdateReservationOrdersRequest request);
+
+    Task<StartPaymentResponse> StartPaymentAsync(
+        Guid reservationId,
+        Guid userId);
 
     Task CancelReservationAsync(
         Guid reservationId,
         Guid userId);
 
-    Task ConfirmPaymentAsync(
-        Guid reservationId);
-
-    Task MarkPaymentFailedAsync(
-        Guid reservationId);
-    
     Task<List<AvailableSlotResponse>> GetAvailableSlotsAsync(
         int restaurantId,
         DateOnly date);
@@ -48,4 +45,7 @@ public interface IReservationService
         int restaurantId,
         DateOnly date,
         TimeOnly time);
+
+    Task HandlePaymentStatusUpdateAsync(
+        PaymentStatusUpdateRequest request);
 }

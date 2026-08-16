@@ -19,4 +19,5 @@ public class ReservationResponse
     public decimal TotalAmount { get; set; }
     public List<OrderResponse> Orders { get; set; } = [];
     public ReservationStatus Status { get; set; }
+    public ReservationPaymentStatus PaymentStatus { get; set; }
 }

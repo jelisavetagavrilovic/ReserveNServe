@@ -8,20 +8,20 @@ namespace Reservations.Domain.ValueObjects;
 
 public enum ReservationStatus
 {
-    /// <summary>
-    /// Reservation has been created but is not yet confirmed.
-    /// </summary>
-    Pending,
+    // /// <summary>
+    // /// Reservation has been created but is not yet confirmed.
+    // /// </summary>
+    // Pending,
 
     /// <summary>
     /// Reservation has been confirmed by the restaurant.
     /// </summary>
     Confirmed,
 
-    /// <summary>
-    /// Reservation contains orders that require payment.
-    /// </summary>
-    PendingPayment,
+    // /// <summary>
+    // /// Reservation contains orders that require payment.
+    // /// </summary>
+    // PendingPayment,
 
     /// <summary>
     /// Reservation has been cancelled.
@@ -33,8 +33,8 @@ public enum ReservationStatus
     /// </summary>
     Completed,
 
-    /// <summary>
-    /// Reservation processing has failed.
-    /// </summary>
-    Failed
+    // /// <summary>
+    // /// Reservation processing has failed.
+    // /// </summary>
+    // Failed
 }

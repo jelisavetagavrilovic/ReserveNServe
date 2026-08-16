@@ -42,12 +42,12 @@ public class ReservationRepository : IReservationRepository
             {
                 case ReservationType.Upcoming:
                     reservations = reservations.Where(r =>
-                        r.StartTime.AddMinutes(r.DurationMinutes) > DateTime.UtcNow);
+                        r.EndTime > DateTime.UtcNow);
                     break;
 
                 case ReservationType.Past:
                     reservations = reservations.Where(r =>
-                        r.StartTime.AddMinutes(r.DurationMinutes) <= DateTime.UtcNow);
+                        r.EndTime <= DateTime.UtcNow);
                     break;
             }
         }
@@ -102,17 +102,16 @@ public class ReservationRepository : IReservationRepository
         var query = _context.Reservations
             .Where(r =>
                 r.TableGroupId == tableGroupId &&
-                (r.Status == ReservationStatus.Pending ||
-                 r.Status == ReservationStatus.PendingPayment ||
-                 r.Status == ReservationStatus.Confirmed) &&
+                r.Status == ReservationStatus.Confirmed &&
                 r.StartTime < endTime &&
                 r.EndTime > startTime);
-        
+
         if (reservationIdToIgnore.HasValue)
         {
-            query = query.Where(r => r.Id != reservationIdToIgnore.Value);
+            query = query.Where(
+                r => r.Id != reservationIdToIgnore.Value);
         }
-        
+
         return await query.CountAsync();
     }
 }

@@ -1,8 +1,7 @@
 /// <summary>
 /// Represents a restaurant reservation created by a user.
 /// A reservation contains booking information, associated food orders,
-/// and manages the reservation lifecycle through validation and
-/// business operations.
+/// and manages reservation and food payment state through domain operations.
 /// </summary>
 
 using Reservations.Domain.ValueObjects;
@@ -12,30 +11,47 @@ namespace Reservations.Domain.Entities;
 public class Reservation
 {
     public Guid Id { get; set; }
+
     public Guid UserId { get; private set; }
+
     public int RestaurantId { get; private set; }
+
     public int TableGroupId { get; private set; }
+
     public DateTime StartTime { get; private set; }
+
     public int GuestNumber { get; private set; }
 
-    // Default reservation duration is 3 hours.
     public int DurationMinutes { get; private set; } = 180;
 
-    // // Reservation end time.
     public DateTime EndTime { get; private set; }
 
-    // Navigation property: food orders associated with this reservation.
     private readonly List<Order> _orders = new();
+
     public IReadOnlyList<Order> Orders => _orders.AsReadOnly();
 
     public TimeSpan? ServingTime { get; private set; }
 
-    // Total price of all ordered items.
     public decimal TotalAmount { get; private set; }
 
-    // Current reservation status.
-    public ReservationStatus Status { get; private set; } = ReservationStatus.Pending;
-    
+    /// <summary>
+    /// Represents the lifecycle of the table reservation itself.
+    /// </summary>
+    public ReservationStatus Status { get; private set; }
+        = ReservationStatus.Confirmed;
+
+    /// <summary>
+    /// Represents the payment state of the food preorder.
+    /// Payment processing itself belongs to the Payment service.
+    /// </summary>
+    public ReservationPaymentStatus PaymentStatus { get; private set; }
+        = ReservationPaymentStatus.NotRequired;
+
+
+    /// <summary>
+    /// Creates a confirmed restaurant reservation.
+    /// Payment is handled separately if food has been pre-ordered.
+    /// </summary>
     public Reservation(
         Guid userId,
         int restaurantId,
@@ -45,66 +61,110 @@ public class Reservation
         int guestNumber,
         TimeSpan? servingTime)
     {
+        if (userId == Guid.Empty)
+            throw new ArgumentException(
+                "User ID cannot be empty.",
+                nameof(userId));
+
+        if (restaurantId <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(restaurantId));
+
+        if (tableGroupId <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(tableGroupId));
+
+        if (guestNumber <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(guestNumber));
+
+        if (endTime <= startTime)
+            throw new ArgumentException(
+                "Reservation end time must be after start time.");
+
         UserId = userId;
         RestaurantId = restaurantId;
         TableGroupId = tableGroupId;
         StartTime = startTime;
         EndTime = endTime;
         GuestNumber = guestNumber;
-        ServingTime = servingTime;
 
-        DurationMinutes = (int)(endTime - startTime).TotalMinutes;
+        DurationMinutes =
+            (int)(endTime - startTime).TotalMinutes;
+
+        SetServingTime(servingTime);
     }
-    
+
+
     private Reservation()
     {
     }
 
+
     /// <summary>
-    /// Determines whether the reservation can still be modified.
-    /// A reservation cannot be modified if it has already started,
-    /// has been cancelled, or has been completed.
+    /// Determines whether reservation details and food orders
+    /// can still be modified.
     /// </summary>
     private bool CanBeModified()
     {
-        return (Status == ReservationStatus.Pending ||
-                Status == ReservationStatus.PendingPayment)
-               && StartTime > DateTime.UtcNow;
+        if (Status != ReservationStatus.Confirmed)
+            return false;
+
+        if (StartTime <= DateTime.UtcNow)
+            return false;
+
+        return PaymentStatus is
+            ReservationPaymentStatus.NotRequired or
+            ReservationPaymentStatus.NotStarted or
+            ReservationPaymentStatus.Failed;
     }
+
 
     /// <summary>
     /// Determines whether the reservation can be cancelled.
-    /// A reservation can only be cancelled before its start time
-    /// and while it is still active.
+    /// A reservation cannot be cancelled while payment or refund
+    /// processing is in progress.
     /// </summary>
     private bool CanBeCancelled()
     {
-        return Status != ReservationStatus.Completed &&
-               Status != ReservationStatus.Cancelled &&
-               StartTime > DateTime.UtcNow;
+        if (Status != ReservationStatus.Confirmed)
+            return false;
+
+        if (StartTime <= DateTime.UtcNow)
+            return false;
+
+        return PaymentStatus != ReservationPaymentStatus.Pending
+               && PaymentStatus != ReservationPaymentStatus.RefundPending;
     }
 
+
     /// <summary>
-    /// Cancels the reservation if cancellation is allowed.
+    /// Indicates whether cancelling this reservation requires
+    /// a refund of a successful food payment.
     /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the reservation cannot be cancelled.
-    /// </exception>
+    public bool RequiresRefund =>
+        PaymentStatus == ReservationPaymentStatus.Succeeded;
+
+
+    /// <summary>
+    /// Cancels the reservation.
+    /// Refund processing is coordinated by the Application layer.
+    /// </summary>
     public void Cancel()
     {
         if (!CanBeCancelled())
-            throw new InvalidOperationException("Reservation cannot be cancelled.");
+        {
+            throw new InvalidOperationException(
+                "Reservation cannot be cancelled.");
+        }
 
         Status = ReservationStatus.Cancelled;
     }
 
+
     /// <summary>
-    /// Updates the reservation details, including the table group,
-    /// start time, guest count, and optional serving time.
+    /// Updates reservation details.
     /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the reservation cannot be modified.
-    /// </exception>
     public void UpdateDetails(
         int tableGroupId,
         DateTime newStartTime,
@@ -113,135 +173,269 @@ public class Reservation
         TimeSpan? servingTime)
     {
         if (!CanBeModified())
-            throw new InvalidOperationException("Reservation cannot be modified.");
+        {
+            throw new InvalidOperationException(
+                "Reservation cannot be modified.");
+        }
+
+        if (tableGroupId <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(tableGroupId));
+
+        if (guestNumber <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(guestNumber));
+
+        if (newEndTime <= newStartTime)
+            throw new ArgumentException(
+                "Reservation end time must be after start time.");
 
         TableGroupId = tableGroupId;
         StartTime = newStartTime;
         EndTime = newEndTime;
-        DurationMinutes = (int)(newEndTime - newStartTime).TotalMinutes;
         GuestNumber = guestNumber;
-        
-        var start = StartTime.TimeOfDay;
-        var end = EndTime.TimeOfDay;
 
-        ServingTime =
-            servingTime.HasValue &&
-            servingTime.Value >= start &&
-            servingTime.Value <= end
-                ? servingTime
-                : null;
+        DurationMinutes =
+            (int)(newEndTime - newStartTime).TotalMinutes;
+
+        SetServingTime(servingTime);
+
+        ResetPaymentAfterModification();
     }
-    
-    public void AddOrders(IEnumerable<Order> orders)
+
+
+    /// <summary>
+    /// Replaces all food orders associated with the reservation
+    /// and recalculates the total amount.
+    /// </summary>
+    public void SetOrders(IEnumerable<Order> orders)
     {
+        if (!CanBeModified())
+        {
+            throw new InvalidOperationException(
+                "Reservation cannot be modified.");
+        }
+
+        orders ??= Enumerable.Empty<Order>();
+
+        _orders.Clear();
+
         foreach (var order in orders)
         {
-            order.ReservationId = Id;
             _orders.Add(order);
         }
 
         RecalculateTotal();
 
-        if (_orders.Any())
-            MarkPendingPayment();
+        ResetPaymentAfterModification();
     }
 
+
     /// <summary>
-    /// Replaces all existing food orders, recalculates the total amount,
-    /// and updates the reservation status.
+    /// Determines whether payment for the food preorder
+    /// can currently be started or retried.
     /// </summary>
-    public void ReplaceOrders(IEnumerable<Order> orders)
+    public bool CanStartPayment()
     {
-        if (!CanBeModified())
-            throw new InvalidOperationException("Reservation cannot be modified.");
+        if (Status != ReservationStatus.Confirmed)
+            return false;
 
-        _orders.Clear();
+        if (StartTime <= DateTime.UtcNow)
+            return false;
 
-        if (orders != null)
+        if (!_orders.Any() || TotalAmount <= 0)
+            return false;
+
+        return PaymentStatus is
+            ReservationPaymentStatus.NotStarted or
+            ReservationPaymentStatus.Failed;
+    }
+
+
+    /// <summary>
+    /// Marks food payment as being processed.
+    /// Used both for the initial payment and payment retry.
+    /// </summary>
+    public void StartPayment()
+    {
+        if (!CanStartPayment())
         {
-            foreach (var order in orders)
-            {
-                order.ReservationId = Id;
-                _orders.Add(order);
-            }
+            throw new InvalidOperationException(
+                "Payment cannot be started for this reservation.");
         }
 
-        RecalculateTotal();
+        PaymentStatus =
+            ReservationPaymentStatus.Pending;
+    }
 
-        if (_orders.Any())
-            MarkPendingPayment();
-        else
-            MarkPending();
-    }
-    
-    /// <summary>
-    /// Marks the reservation as awaiting payment.
-    /// This state is used when the reservation contains food orders
-    /// that must be paid before the reservation can be confirmed.
-    /// </summary>
-    private void MarkPendingPayment()
-    {
-        Status = ReservationStatus.PendingPayment;
-    }
-    
-    /// <summary>
-    /// Marks the reservation as pending.
-    /// This state indicates that the reservation does not require
-    /// payment and is still awaiting confirmation.
-    /// </summary>
-    private void MarkPending()
-    {
-        Status = ReservationStatus.Pending;
-    }
-    
-    /// <summary>
-    /// Marks the reservation as confirmed after a successful payment.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the reservation is not awaiting payment.
-    /// </exception>
-    public void Confirm()
-    {
-        if (Status != ReservationStatus.PendingPayment)
-            throw new InvalidOperationException("Reservation is not awaiting payment.");
 
-        Status = ReservationStatus.Confirmed;
-    }
-    
     /// <summary>
-    /// Marks the reservation payment as failed.
+    /// Marks food payment as successful.
     /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the reservation is not awaiting payment.
-    /// </exception>
+    public void MarkPaymentSucceeded()
+    {
+        if (PaymentStatus == ReservationPaymentStatus.Succeeded)
+            return;
+
+        if (PaymentStatus != ReservationPaymentStatus.Pending)
+        {
+            throw new InvalidOperationException(
+                "Payment is not pending.");
+        }
+
+        PaymentStatus =
+            ReservationPaymentStatus.Succeeded;
+    }
+
+
+    /// <summary>
+    /// Marks food payment as failed.
+    /// The table reservation remains confirmed.
+    /// Payment can be retried afterwards.
+    /// </summary>
     public void MarkPaymentFailed()
     {
-        if (Status != ReservationStatus.PendingPayment)
-            throw new InvalidOperationException("Reservation is not awaiting payment.");
+        if (PaymentStatus == ReservationPaymentStatus.Failed)
+            return;
 
-        Status = ReservationStatus.Failed;
+        if (PaymentStatus != ReservationPaymentStatus.Pending)
+        {
+            throw new InvalidOperationException(
+                "Payment is not pending.");
+        }
+
+        PaymentStatus =
+            ReservationPaymentStatus.Failed;
     }
 
+
     /// <summary>
-    /// Marks the reservation as completed after its scheduled end time.
-    /// Only confirmed reservations can be completed.
+    /// Marks a successful payment as awaiting refund.
+    /// A failed refund may also be retried.
+    /// </summary>
+    public void MarkRefundPending()
+    {
+        if (PaymentStatus ==
+            ReservationPaymentStatus.RefundPending)
+        {
+            return;
+        }
+
+        if (PaymentStatus != ReservationPaymentStatus.Succeeded &&
+            PaymentStatus != ReservationPaymentStatus.RefundFailed)
+        {
+            throw new InvalidOperationException(
+                "Refund cannot be started.");
+        }
+
+        PaymentStatus =
+            ReservationPaymentStatus.RefundPending;
+    }
+    
+    /// <summary>
+    /// Marks the food payment as successfully refunded.
+    /// </summary>
+    public void MarkPaymentRefunded()
+    {
+        if (PaymentStatus ==
+            ReservationPaymentStatus.Refunded)
+        {
+            return;
+        }
+
+        if (PaymentStatus !=
+            ReservationPaymentStatus.RefundPending)
+        {
+            throw new InvalidOperationException(
+                "Payment is not awaiting refund.");
+        }
+
+        PaymentStatus =
+            ReservationPaymentStatus.Refunded;
+    }
+    
+    /// <summary>
+    /// Marks the refund attempt as failed.
+    /// The refund may be retried afterwards.
+    /// </summary>
+    public void MarkRefundFailed()
+    {
+        if (PaymentStatus ==
+            ReservationPaymentStatus.RefundFailed)
+        {
+            return;
+        }
+
+        if (PaymentStatus !=
+            ReservationPaymentStatus.RefundPending)
+        {
+            throw new InvalidOperationException(
+                "Refund is not pending.");
+        }
+
+        PaymentStatus =
+            ReservationPaymentStatus.RefundFailed;
+    }
+
+
+    /// <summary>
+    /// Marks the reservation as completed after
+    /// its scheduled end time.
     /// </summary>
     public void MarkCompleted()
     {
         if (Status != ReservationStatus.Confirmed)
-            throw new InvalidOperationException("Only confirmed reservations can be completed.");
+        {
+            throw new InvalidOperationException(
+                "Only confirmed reservations can be completed.");
+        }
 
         if (EndTime > DateTime.UtcNow)
-            throw new InvalidOperationException("Reservation has not ended yet.");
+        {
+            throw new InvalidOperationException(
+                "Reservation has not ended yet.");
+        }
 
         Status = ReservationStatus.Completed;
     }
 
-    /// <summary>
-    /// Recalculates the total amount based on all current food orders.
-    /// </summary>
+
     private void RecalculateTotal()
     {
-        TotalAmount = _orders.Sum(order => order.Price * order.Quantity);
+        TotalAmount =
+            _orders.Sum(order =>
+                order.Price * order.Quantity);
+    }
+
+
+    /// <summary>
+    /// Any allowed reservation/order modification invalidates
+    /// the previous failed or not-started payment state.
+    /// </summary>
+    private void ResetPaymentAfterModification()
+    {
+        PaymentStatus = _orders.Any()
+            ? ReservationPaymentStatus.NotStarted
+            : ReservationPaymentStatus.NotRequired;
+    }
+
+
+    private void SetServingTime(
+        TimeSpan? servingTime)
+    {
+        if (!servingTime.HasValue)
+        {
+            ServingTime = null;
+            return;
+        }
+
+        var start = StartTime.TimeOfDay;
+        var end = EndTime.TimeOfDay;
+
+        ServingTime =
+            servingTime.Value >= start &&
+            servingTime.Value <= end
+                ? servingTime
+                : null;
     }
 }

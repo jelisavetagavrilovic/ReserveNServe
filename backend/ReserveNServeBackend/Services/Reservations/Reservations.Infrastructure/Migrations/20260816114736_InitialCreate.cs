@@ -26,7 +26,8 @@ namespace Reservations.Infrastructure.Migrations
                     EndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ServingTime = table.Column<TimeSpan>(type: "interval", nullable: true),
                     TotalAmount = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
-                    Status = table.Column<string>(type: "text", nullable: false)
+                    Status = table.Column<string>(type: "text", nullable: false),
+                    PaymentStatus = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {

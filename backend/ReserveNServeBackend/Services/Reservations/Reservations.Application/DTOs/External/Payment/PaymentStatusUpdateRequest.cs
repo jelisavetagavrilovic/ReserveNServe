@@ -1,8 +1,8 @@
 namespace Reservations.Application.DTOs.External.Payment;
 
-public class CreatePaymentResponse
+public class PaymentStatusUpdateRequest
 {
-    public string ClientSecret { get; set; } = string.Empty;
+    public Guid ReservationId { get; set; }
 
     public PaymentStatus Status { get; set; }
 }

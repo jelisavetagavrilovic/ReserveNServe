@@ -12,7 +12,7 @@ using Reservations.Infrastructure.DatabaseContext;
 namespace Reservations.Infrastructure.Migrations
 {
     [DbContext(typeof(ReservationsDbContext))]
-    [Migration("20260717192031_InitialCreate")]
+    [Migration("20260816114736_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -70,6 +70,9 @@ namespace Reservations.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("GuestNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PaymentStatus")
                         .HasColumnType("integer");
 
                     b.Property<int>("RestaurantId")
