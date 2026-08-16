@@ -31,7 +31,7 @@ namespace Payment.API.Controllers
 
             var options = new PaymentIntentCreateOptions
             {
-                Amount = request.Amount,
+                Amount = (long)Math.Round(request.Amount * 100, MidpointRounding.AwayFromZero),
                 Currency = request.Currency,
                 Metadata = new Dictionary<string, string> { { "reservationId", request.ReservationId } },
                 AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions

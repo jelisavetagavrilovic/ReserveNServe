@@ -7,7 +7,7 @@ namespace Payment.API.DTO
         [Required]
         public string ReservationId { get; set; }
         [Required]
-        public long Amount { get; set; }
+        public decimal Amount { get; set; }
         [Required]
         public string Currency { get; set; }
     }
