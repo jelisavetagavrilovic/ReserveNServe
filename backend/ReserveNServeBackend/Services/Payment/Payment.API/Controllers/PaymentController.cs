@@ -2,7 +2,9 @@
 using Payment.API.DTO;
 using Payment.API.Handler;
 using Stripe;
+using Stripe.V2;
 using System.Diagnostics;
+using System.Reflection.Metadata;
 
 namespace Payment.API.Controllers
 {
@@ -11,9 +13,11 @@ namespace Payment.API.Controllers
     public class PaymentController : ControllerBase
     {
         private PaymentsHandler _paymentHandler;
-        public PaymentController(PaymentsHandler paymentHandler)
+        private readonly string _webhookSecret;
+        public PaymentController(PaymentsHandler paymentHandler, IConfiguration configuration)
         {
             _paymentHandler = paymentHandler;
+            _webhookSecret = configuration["Stripe:WebhookSecret"]; //TODO temp -> dotnet global environment variable STRIPE_WEBHOOK_SECRET="whsec_..."
         }
 
         [HttpPost]
@@ -27,6 +31,16 @@ namespace Payment.API.Controllers
             if(!_paymentHandler.IsAmountValid(request.Amount))
             {
                 return BadRequest("Invalid amount. Amount must be greater than zero.");
+            }
+
+            Entities.Payment existingPayment = await _paymentHandler.GetPaymentByReservationIdAsync(request.ReservationId);
+            if(existingPayment != null)
+            {
+                return Ok(new
+                {
+                    clientSecret = existingPayment.payment_intent,
+                    status = existingPayment.status
+                });
             }
 
             var options = new PaymentIntentCreateOptions
@@ -50,13 +64,15 @@ namespace Payment.API.Controllers
                 {
                     reservation_id = request.ReservationId,
                     payment_intent = paymentIntent.Id,
+                    status = (int)Enums.PaymentStatus.PaymentPending
                 };
 
                 _paymentHandler.InsertNewPaymentAsync(payment);
 
                 return Ok(new
                 {
-                    clientSecret = paymentIntent.ClientSecret
+                    clientSecret = paymentIntent.ClientSecret,
+                    status = payment.status
                 });
             }
             catch (StripeException ex)
@@ -103,6 +119,38 @@ namespace Payment.API.Controllers
             }
 
             return StatusCode(200, "Refund processed successfully.");
+        }
+
+        [HttpPost]
+        [Route("StripeWebhook")]
+        public async Task<IActionResult> StripeWebhook()
+        {
+            var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+
+            var signature = Request.Headers["Stripe-Signature"].ToString();
+
+            Event stripeEvent;
+
+            try
+            {
+                stripeEvent = EventUtility.ConstructEvent(json, signature, _webhookSecret);
+            }
+            catch (StripeException)
+            {
+                return BadRequest();
+            }
+
+            try
+            {
+                await _paymentHandler.HandleWebhookAsync(stripeEvent);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Stripe error: {ex.Message}");
+                // TODO LOG
+                return StatusCode(500, "An error occurred while handling the webhook");
+            }
+            return Ok();
         }
     }
 }
