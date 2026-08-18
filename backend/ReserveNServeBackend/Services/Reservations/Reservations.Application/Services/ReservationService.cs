@@ -87,6 +87,23 @@ public class ReservationService : IReservationService
 
         return tableGroup;
     }
+    
+    private static void ValidateGuestCapacity(
+        TableGroupResponse tableGroup,
+        int guestNumber)
+    {
+        if (guestNumber <= 0)
+        {
+            throw new InvalidOperationException(
+                "Guest number must be greater than zero.");
+        }
+
+        if (guestNumber > tableGroup.Capacity)
+        {
+            throw new InvalidOperationException(
+                "The selected table does not have enough seats.");
+        }
+    }
 
     private async Task<List<Order>> BuildOrdersAsync(
         IEnumerable<OrderRequest>? requests)
@@ -207,7 +224,7 @@ public class ReservationService : IReservationService
     private static void ValidateWorkingHours(
         RestaurantInfoResponse restaurant,
         DateTime startTime,
-        ref DateTime endTime)
+        DateTime endTime)
     {
         var openingDateTime =
             startTime.Date.Add(
@@ -231,7 +248,8 @@ public class ReservationService : IReservationService
 
         if (endTime > closingDateTime)
         {
-            endTime = closingDateTime;
+            throw new InvalidOperationException(
+                "The reservation would end after the restaurant closes.");
         }
     }
 
@@ -255,16 +273,16 @@ public class ReservationService : IReservationService
             date.ToDateTime(
                 restaurant.ClosingTime);
 
-        while (current < closing)
+        while (
+            current
+                .AddMinutes(
+                    restaurant.ReservationDurationMinutes)
+            <= closing
+        )
         {
             var end =
                 current.AddMinutes(
                     restaurant.ReservationDurationMinutes);
-
-            ValidateWorkingHours(
-                restaurant,
-                current,
-                ref end);
 
             var hasAvailableTable = false;
 
@@ -318,15 +336,11 @@ public class ReservationService : IReservationService
         var endTime =
             startTime.AddMinutes(
                 restaurant.ReservationDurationMinutes);
-
-        var closing =
-            date.ToDateTime(
-                restaurant.ClosingTime);
-
-        if (endTime > closing)
-        {
-            endTime = closing;
-        }
+        
+        ValidateWorkingHours(
+            restaurant,
+            startTime,
+            endTime);
 
         var availableTables =
             new List<AvailableTableResponse>();
@@ -370,6 +384,10 @@ public class ReservationService : IReservationService
             GetTableGroup(
                 restaurant,
                 request.TableGroupId);
+        
+        ValidateGuestCapacity(
+            tableGroup,
+            request.GuestNumber);
 
         var startTime =
             DateTime.SpecifyKind(
@@ -384,7 +402,7 @@ public class ReservationService : IReservationService
         ValidateWorkingHours(
             restaurant,
             startTime,
-            ref endTime);
+            endTime);
 
         await ValidateAvailabilityAsync(
             tableGroup,
@@ -501,6 +519,10 @@ public class ReservationService : IReservationService
             GetTableGroup(
                 restaurant,
                 request.TableGroupId);
+        
+        ValidateGuestCapacity(
+            tableGroup,
+            request.GuestNumber);
 
         var startTime =
             DateTime.SpecifyKind(
@@ -515,7 +537,7 @@ public class ReservationService : IReservationService
         ValidateWorkingHours(
             restaurant,
             startTime,
-            ref endTime);
+            endTime);
 
         await ValidateAvailabilityAsync(
             tableGroup,
