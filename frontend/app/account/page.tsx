@@ -1,53 +1,76 @@
 "use client"
 
-import type React from "react"
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useEffect,
+  useState,
+} from "react"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+
+import { useAuth } from "@/auth/hooks/useAuth"
+import { authService } from "@/auth/services/auth.service"
+
+import { PageContainer } from "@/components/page-container"
+import { PageHeader } from "@/components/page-header"
+import Loading from "@/components/loading"
 
 import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
 
 import {
-  User,
+  CalendarDays,
+  Loader2,
   Mail,
   Phone,
-  Loader2,
-  Save,
-  Calendar,
   RotateCcw,
+  Save,
+  User,
 } from "lucide-react"
 
-import { useAuth } from "@/auth/hooks/useAuth"
-import { authService } from "@/auth/services/auth.service"
+interface ProfileData {
+  name: string
+  email: string
+  phone: string
+}
 
 export default function AccountPage() {
   const router = useRouter()
-  const { user, isAuthenticated } = useAuth()
 
-  const [isHydrated, setIsHydrated] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const {
+    user,
+    isAuthenticated,
+  } = useAuth()
 
-  const [profileData, setProfileData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-  })
+  const [isHydrated, setIsHydrated] =
+    useState(false)
 
-  const [originalProfile, setOriginalProfile] = useState({
-    name: "",
-    email: "",
-    phone: "",
-  })
+  const [isLoading, setIsLoading] =
+    useState(false)
+
+  const [profileData, setProfileData] =
+    useState<ProfileData>({
+      name: "",
+      email: "",
+      phone: "",
+    })
+
+  const [originalProfile, setOriginalProfile] =
+    useState<ProfileData>({
+      name: "",
+      email: "",
+      phone: "",
+    })
 
   useEffect(() => {
     setIsHydrated(true)
@@ -57,29 +80,37 @@ export default function AccountPage() {
     if (!isHydrated) return
 
     if (!isAuthenticated) {
-      router.push("/login")
+      router.replace("/login")
       return
     }
 
-    if (user) {
-      const data = {
-        name: user.name,
-        email: user.email,
-        phone: user.phone ?? "",
-      }
+    if (!user) return
 
-      setProfileData(data)
-      setOriginalProfile(data)
+    const data = {
+      name: user.name,
+      email: user.email,
+      phone: user.phone ?? "",
     }
-  }, [isHydrated, isAuthenticated, user, router])
+
+    setProfileData(data)
+    setOriginalProfile(data)
+  }, [
+    isHydrated,
+    isAuthenticated,
+    user,
+    router,
+  ])
 
   const handleProfileChange = (
-    e: React.ChangeEvent<HTMLInputElement>
+    event: ChangeEvent<HTMLInputElement>
   ) => {
-    const { name, value } = e.target
+    const {
+      name,
+      value,
+    } = event.target
 
-    setProfileData((prev) => ({
-      ...prev,
+    setProfileData((previous) => ({
+      ...previous,
       [name]: value,
     }))
   }
@@ -89,14 +120,17 @@ export default function AccountPage() {
     profileData.email !== originalProfile.email ||
     profileData.phone !== originalProfile.phone
 
-  const handleCancelChanges = () => {
+  const handleDiscardChanges = () => {
     setProfileData(originalProfile)
   }
 
   const handleProfileSubmit = async (
-    e: React.FormEvent
+    event: FormEvent<HTMLFormElement>
   ) => {
-    e.preventDefault()
+    event.preventDefault()
+
+    if (!isDirty) return
+
     setIsLoading(true)
 
     try {
@@ -106,136 +140,171 @@ export default function AccountPage() {
         phone: profileData.phone,
       })
 
-      setOriginalProfile(profileData)
+      setOriginalProfile({
+        ...profileData,
+      })
     } catch (error) {
-      console.error("Failed to update profile", error)
+      console.error(
+        "Failed to update profile:",
+        error
+      )
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (!isHydrated || !isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    )
+  if (
+    !isHydrated ||
+    !isAuthenticated ||
+    !user
+  ) {
+    return <Loading />
   }
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Account Settings
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your profile information
-          </p>
-        </div>
-
-        <Card className="mb-6">
-          <CardContent className="pt-6">
+    <PageContainer>
+      <div className="mx-auto w-full max-w-2xl">
+        <PageHeader
+          title="Account Settings"
+          description="Manage your profile information."
+          action={
             <Link href="/bookings">
               <Button
+                type="button"
                 variant="outline"
-                className="w-full flex items-center justify-center gap-2 py-3"
+                className="rounded-xl"
               >
-                <Calendar className="h-5 w-5" />
-                View All Bookings
+                <CalendarDays className="mr-2 h-4 w-4" />
+                My Bookings
               </Button>
             </Link>
-          </CardContent>
-        </Card>
+          }
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Information</CardTitle>
-            <CardDescription>
-              Update your personal information
-            </CardDescription>
+        <Card className="overflow-hidden rounded-2xl border shadow-sm">
+          <CardHeader className="pb-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+
+              <div>
+                <CardTitle className="text-base">
+                  Profile Information
+                </CardTitle>
+
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Update your personal and contact information
+                </p>
+              </div>
+            </div>
           </CardHeader>
 
           <CardContent>
             <form
               onSubmit={handleProfileSubmit}
-              className="space-y-4"
+              className="space-y-5"
             >
+              {/* Full name */}
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">
+                  Full Name
+                </Label>
 
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
                   <Input
                     id="name"
                     name="name"
-                    className="pl-10"
+                    type="text"
+                    autoComplete="name"
                     value={profileData.name}
                     onChange={handleProfileChange}
+                    disabled={isLoading}
+                    className="h-11 rounded-xl pl-10"
                   />
                 </div>
               </div>
 
+              {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">
+                  Email
+                </Label>
 
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
                   <Input
                     id="email"
                     name="email"
                     type="email"
-                    className="pl-10"
+                    autoComplete="email"
                     value={profileData.email}
                     onChange={handleProfileChange}
+                    disabled={isLoading}
+                    className="h-11 rounded-xl pl-10"
                   />
                 </div>
               </div>
 
+              {/* Phone */}
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="phone">
+                  Phone Number
+                </Label>
 
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
                   <Input
                     id="phone"
                     name="phone"
                     type="tel"
-                    placeholder="+1 (555) 123-4567"
-                    className="pl-10"
+                    autoComplete="tel"
+                    placeholder="+381 60 123 4567"
                     value={profileData.phone}
                     onChange={handleProfileChange}
+                    disabled={isLoading}
+                    className="h-11 rounded-xl pl-10"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
+              <Separator className="my-6" />
+
+              {/* Actions */}
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 {isDirty && (
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={handleCancelChanges}
+                    className="rounded-xl"
+                    disabled={isLoading}
+                    onClick={handleDiscardChanges}
                   >
-                    <RotateCcw className="h-4 w-4 mr-2" />
+                    <RotateCcw className="mr-2 h-4 w-4" />
                     Discard Changes
                   </Button>
                 )}
 
                 <Button
                   type="submit"
-                  disabled={!isDirty || isLoading}
+                  className="rounded-xl"
+                  disabled={
+                    !isDirty ||
+                    isLoading
+                  }
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Saving...
                     </>
                   ) : (
                     <>
-                      <Save className="h-4 w-4 mr-2" />
+                      <Save className="mr-2 h-4 w-4" />
                       Save Changes
                     </>
                   )}
@@ -245,6 +314,6 @@ export default function AccountPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   )
 }

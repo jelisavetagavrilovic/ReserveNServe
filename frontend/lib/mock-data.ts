@@ -2,7 +2,7 @@ import type {
   Restaurant,
   Table,
   MenuItem,
-} from "./types"
+} from "./types/restaurant.types"
 
 // ============================================================================
 // MOCK DATA
@@ -37,11 +37,8 @@ export const mockRestaurants: Restaurant[] = [
     address: "Knez Mihailova 12",
     phone_number: "+381 64 123 45 67",
 
-    opening_time_workday: "10:00",
-    closing_time_workday: "22:00",
-
-    opening_time_weekend: "11:00",
-    closing_time_weekend: "23:00",
+    opening_time: "10:00",
+    closing_time: "22:00",
 
     rating: 4.5,
     price_range: "$$",
@@ -61,11 +58,8 @@ export const mockRestaurants: Restaurant[] = [
     address: "Zmaj Jovina 45",
     phone_number: "+381 63 987 65 43",
 
-    opening_time_workday: "11:00",
-    closing_time_workday: "21:00",
-
-    opening_time_weekend: "12:00",
-    closing_time_weekend: "22:00",
+    opening_time: "11:00",
+    closing_time: "21:00",
 
     rating: 4.8,
     price_range: "$$$",
@@ -85,11 +79,8 @@ export const mockRestaurants: Restaurant[] = [
     address: "Kralja Petra 8",
     phone_number: "+381 65 555 44 33",
 
-    opening_time_workday: "09:00",
-    closing_time_workday: "23:00",
-
-    opening_time_weekend: "10:00",
-    closing_time_weekend: "23:30",
+    opening_time: "09:00",
+    closing_time: "23:00",
 
     rating: 4.2,
     price_range: "$$",
@@ -109,11 +100,8 @@ export const mockRestaurants: Restaurant[] = [
     address: "Bulevar Oslobođenja 15",
     phone_number: "+381 62 112 22 33",
 
-    opening_time_workday: "12:00",
-    closing_time_workday: "23:00",
-
-    opening_time_weekend: "12:00",
-    closing_time_weekend: "23:30",
+    opening_time: "12:00",
+    closing_time: "23:00",
 
     rating: 4.9,
     price_range: "$$$",
@@ -133,11 +121,8 @@ export const mockRestaurants: Restaurant[] = [
     address: "Njegoševa 20",
     phone_number: "+381 64 777 88 99",
 
-    opening_time_workday: "10:00",
-    closing_time_workday: "22:30",
-
-    opening_time_weekend: "11:00",
-    closing_time_weekend: "23:00",
+    opening_time: "10:00",
+    closing_time: "22:30",
 
     rating: 4.6,
     price_range: "$$$",
@@ -327,7 +312,7 @@ export const mockMenuItems: MenuItem[] = [
       "Romaine lettuce, croutons, parmesan and Caesar dressing.",
     price: 690,
     image: "",
-    category: "salad",
+    category: "appetizer",
   },
 
   {
@@ -365,7 +350,7 @@ export const mockMenuItems: MenuItem[] = [
       "Traditional Japanese soup with tofu, seaweed and spring onion.",
     price: 450,
     image: "",
-    category: "soup",
+    category: "appetizer",
   },
 
   {
@@ -403,7 +388,7 @@ export const mockMenuItems: MenuItem[] = [
       "Tomato, cucumber, pepper, onion and grated white cheese.",
     price: 520,
     image: "",
-    category: "salad",
+    category: "appetizer",
   },
 
   {
@@ -430,7 +415,7 @@ export const mockMenuItems: MenuItem[] = [
       "Slow-cooked onion soup with toasted bread and melted cheese.",
     price: 790,
     image: "",
-    category: "starter",
+    category: "appetizer",
   },
 
   {
@@ -479,7 +464,7 @@ export const mockMenuItems: MenuItem[] = [
       "Tomato, cucumber, olives, red onion and feta cheese.",
     price: 690,
     image: "",
-    category: "salad",
+    category: "appetizer",
   },
 
   {
@@ -491,6 +476,96 @@ export const mockMenuItems: MenuItem[] = [
     price: 1750,
     image: "",
     category: "main",
+  },
+
+  {
+    id: 16,
+    restaurant_id: 1,
+    food_name: "Sparkling Water",
+    description: "Chilled sparkling mineral water.",
+    price: 280,
+    image: "",
+    category: "drinks",
+  },
+  {
+    id: 17,
+    restaurant_id: 2,
+    food_name: "Green Tea",
+    description: "Traditional Japanese green tea.",
+    price: 320,
+    image: "",
+    category: "drinks",
+  },
+  {
+    id: 18,
+    restaurant_id: 3,
+    food_name: "Homemade Lemonade",
+    description: "Fresh homemade lemonade.",
+    price: 350,
+    image: "",
+    category: "drinks",
+  },
+  {
+    id: 19,
+    restaurant_id: 4,
+    food_name: "Still Water",
+    description: "Chilled still mineral water.",
+    price: 300,
+    image: "",
+    category: "drinks",
+  },
+  {
+    id: 20,
+    restaurant_id: 5,
+    food_name: "Fresh Orange Juice",
+    description: "Freshly squeezed orange juice.",
+    price: 490,
+    image: "",
+    category: "drinks",
+  },
+
+  {
+    id: 21,
+    restaurant_id: 1,
+    food_name: "Tiramisu",
+    description:
+      "Classic Italian dessert with mascarpone, coffee and cocoa.",
+    price: 590,
+    image: "",
+    category: "dessert",
+  },
+
+  {
+    id: 22,
+    restaurant_id: 2,
+    food_name: "Mochi Ice Cream",
+    description:
+      "Soft rice dough filled with creamy ice cream.",
+    price: 650,
+    image: "",
+    category: "dessert",
+  },
+
+  {
+    id: 23,
+    restaurant_id: 3,
+    food_name: "Baklava",
+    description:
+      "Layered pastry with walnuts, honey and aromatic syrup.",
+    price: 490,
+    image: "",
+    category: "dessert",
+  },
+
+  {
+    id: 24,
+    restaurant_id: 5,
+    food_name: "Panna Cotta",
+    description:
+      "Creamy vanilla panna cotta with seasonal fruit.",
+    price: 620,
+    image: "",
+    category: "dessert",
   },
 ]
 

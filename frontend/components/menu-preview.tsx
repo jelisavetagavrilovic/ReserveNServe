@@ -1,12 +1,14 @@
 "use client"
 
 import Image from "next/image"
+
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+
 import {
   Tabs,
   TabsContent,
@@ -14,79 +16,137 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 
-import type { MenuItem } from "@/lib/types/restaurant.types"
+import type {
+  MenuCategory,
+  MenuItem,
+} from "@/lib/types/restaurant.types"
+
 import { getImageSrc } from "@/lib/utils"
+import { formatCurrency } from "@/lib/formatters"
 
 interface MenuPreviewProps {
   menuItems: MenuItem[]
 }
 
-export function MenuPreview({ menuItems }: MenuPreviewProps) {
-  const groupedMenuItems = {
-    appetizer: menuItems.filter((m) => m.category === "appetizer"),
-    main: menuItems.filter((m) => m.category === "main"),
-    dessert: menuItems.filter((m) => m.category === "dessert"),
-    drinks: menuItems.filter((m) => m.category === "drinks"),
+const categories: {
+  value: MenuCategory
+  label: string
+}[] = [
+  { value: "appetizer", label: "Appetizers" },
+  { value: "main", label: "Mains" },
+  { value: "dessert", label: "Desserts" },
+  { value: "drinks", label: "Drinks" },
+]
+
+export function MenuPreview({
+  menuItems,
+}: MenuPreviewProps) {
+  const groupedMenuItems: Record<
+    MenuCategory,
+    MenuItem[]
+  > = {
+    appetizer: menuItems.filter(
+      (item) => item.category === "appetizer"
+    ),
+    main: menuItems.filter(
+      (item) => item.category === "main"
+    ),
+    dessert: menuItems.filter(
+      (item) => item.category === "dessert"
+    ),
+    drinks: menuItems.filter(
+      (item) => item.category === "drinks"
+    ),
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Menu Preview</CardTitle>
+    <Card className="rounded-2xl border shadow-sm">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg">
+          Menu Preview
+        </CardTitle>
+
+        <p className="text-sm text-muted-foreground">
+          Explore the restaurant menu before booking
+        </p>
       </CardHeader>
 
       <CardContent>
-        <Tabs defaultValue="appetizer">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="appetizer">Appetizers</TabsTrigger>
-            <TabsTrigger value="main">Mains</TabsTrigger>
-            <TabsTrigger value="dessert">Desserts</TabsTrigger>
-            <TabsTrigger value="drinks">Drinks</TabsTrigger>
+        <Tabs
+          defaultValue="appetizer"
+          className="space-y-4"
+        >
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-lg bg-muted/60 p-1 sm:grid-cols-4">
+            {categories.map((category) => (
+              <TabsTrigger
+                key={category.value}
+                value={category.value}
+                className="rounded-md"
+              >
+                {category.label}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          {(["appetizer", "main", "dessert", "drinks"] as const).map(
-            (category) => (
+          {categories.map((category) => {
+            const items =
+              groupedMenuItems[category.value]
+
+            return (
               <TabsContent
-                key={category}
-                value={category}
-                className="space-y-4"
+                key={category.value}
+                value={category.value}
+                className="mt-0"
               >
-                {groupedMenuItems[category].map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex gap-4 p-4 rounded-lg border hover:border-primary/50 transition-colors"
-                  >
-                    {/* same image */}
-                    <div className="relative h-24 w-24 rounded-lg overflow-hidden flex-shrink-0">
-                      <Image
-                        src={getImageSrc(item.image) || "/placeholder.svg"}
-                        alt={item.food_name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-
-                    {/* same content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <h4 className="font-semibold">
-                          {item.food_name}
-                        </h4>
-
-                        <span className="font-bold text-primary whitespace-nowrap">
-                          ${item.price}
-                        </span>
-                      </div>
-
-                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                        {item.description}
-                      </p>
-                    </div>
+                {items.length === 0 ? (
+                  <div className="rounded-lg border border-dashed px-4 py-8 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      No items available in this category.
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  <div className="divide-y">
+                    {items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex gap-4 py-4 first:pt-0 last:pb-0"
+                      >
+                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-muted">
+                          <Image
+                            src={
+                              getImageSrc(item.image) ||
+                              "/placeholder.svg"
+                            }
+                            alt={item.food_name}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-4">
+                            <h4 className="text-sm font-bold leading-snug">
+                              {item.food_name}
+                            </h4>
+
+                            <span className="shrink-0 whitespace-nowrap text-sm font-semibold text-primary">
+                              {formatCurrency(item.price)}
+                            </span>
+                          </div>
+
+                          {item.description && (
+                            <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
             )
-          )}
+          })}
         </Tabs>
       </CardContent>
     </Card>

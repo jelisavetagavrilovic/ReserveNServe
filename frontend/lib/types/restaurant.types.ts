@@ -1,4 +1,4 @@
-import { PaginatedResponse } from "./pagination.types"
+import type { PaginatedResponse } from "./pagination.types"
 
 // restaurants
 export type Restaurant = {
@@ -8,10 +8,8 @@ export type Restaurant = {
   city: string
   address: string
   phone_number: string
-  opening_time_workday: string
-  closing_time_workday: string
-  opening_time_weekend: string
-  closing_time_weekend: string
+  opening_time: string
+  closing_time: string
   rating: number
   price_range: string
   cuisine_type: string
@@ -59,6 +57,12 @@ export type TableDetailsResponse = {
 }
 
 // menu
+export type MenuCategory =
+  | "appetizer"
+  | "main"
+  | "dessert"
+  | "drinks"
+
 export type MenuItem = {
   id: number
   restaurant_id: number
@@ -66,7 +70,7 @@ export type MenuItem = {
   description: string
   price: number
   image: string
-  category: string
+  category: MenuCategory
 }
 
 export type MenuListResponse = {

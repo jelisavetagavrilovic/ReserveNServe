@@ -1,323 +1,54 @@
-// "use client"
-
-// import { useEffect, useState } from "react"
-// import { useAppStore } from "@/lib/store"
-// import { useRouter, useParams } from "next/navigation"
-// import { MenuContent } from "@/components/menu-content"
-// import { YourOrder } from "@/components/order-content"
-// import { Button } from "@/components/ui/button"
-// import { format, parse } from "date-fns"
-// import type {
-//   Restaurant,
-//   MenuItem,
-// } from "@/lib/services/restaurant.service"
-// import {
-//   Select,
-//   SelectTrigger,
-//   SelectValue,
-//   SelectContent,
-//   SelectItem,
-// } from "@/components/ui/select"
-// import {
-//   Card,
-//   CardHeader,
-//   CardContent,
-//   CardTitle,
-// } from "@/components/ui/card"
-// import {
-//   getRestaurantById,
-//   getMenuByRestaurant,
-// } from "@/lib/services/restaurant.service"
-// import {
-//   createReservation,
-//   updateReservationOrders,
-// } from "@/lib/services/reservation.service"
-// import Loading from "@/components/loading"
-// import {
-//   Clock,
-//   CalendarDays,
-//   MapPin,
-//   Users,
-//   ArrowLeft,
-//   Armchair,
-// } from "lucide-react"
-// import type {
-//   ReservationRequest,
-//   ReservationResponse,
-// } from "@/lib/types/reservation.types"
-
-// export default function MenuPage() {
-//   const params = useParams()
-//   const router = useRouter()
-//   const id = Number(params.id)
-
-//   const {
-//     currentReservationRequest,
-//     setCurrentReservationRequest,
-//     currentReservationResponse,
-//     setCurrentReservationResponse,
-//     cart,
-//     selectedTable,
-//   } = useAppStore()
-
-//   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
-//   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
-//   const [availableSlots, setAvailableSlots] = useState<string[]>([])
-//   const [servingTime, setServingTime] = useState("")
-//   const [loading, setLoading] = useState(true)
-
-
-//   const generateServingSlots = (startTime: string) => {
-//     const [hours, minutes] = startTime.split(":").map(Number)
-
-//     const slots: string[] = []
-
-//     for (let i = 0; i <= 4; i++) {
-//       const totalMinutes = hours * 60 + minutes + i * 15
-
-//       const h = Math.floor(totalMinutes / 60)
-//       const m = totalMinutes % 60
-
-//       slots.push(
-//         `${h.toString().padStart(2, "0")}:${m
-//           .toString()
-//           .padStart(2, "0")}`
-//       )
-//     }
-
-//     return slots
-//   }
-
-//   useEffect(() => {
-//     if (!currentReservationRequest) return
-
-//     const init = async () => {
-//       setLoading(true)
-
-//       try {
-//         const [restaurantResponse, menuResponse] = await Promise.all([
-//           getRestaurantById(currentReservationRequest.restaurantId),
-//           getMenuByRestaurant(currentReservationRequest.restaurantId),
-//         ])
-
-//         setRestaurant(restaurantResponse?.restaurant ?? null)
-//         setMenuItems(menuResponse.items)
-//         const slots = generateServingSlots(
-//           currentReservationRequest.startTime
-//         )
-
-//         setAvailableSlots(slots)
-//         setServingTime(currentReservationRequest.startTime)
-//       } finally {
-//         setLoading(false)
-//       }
-//     }
-
-//     void init()
-//   }, [currentReservationRequest])
-
-//   if (!currentReservationRequest) {
-//     return (
-//       <div className="container mx-auto px-4 py-16 text-center">
-//         <h1 className="text-2xl font-bold mb-4">
-//           Please start a reservation first
-//         </h1>
-//         <Button onClick={() => router.push(`/restaurants/${id}`)}>
-//           Go Back
-//         </Button>
-//       </div>
-//     )
-//   }
-
-//   if (loading) return <Loading />
-//   if (!restaurant) return null
-
-//   const handleProceed = async () => {
-//     const request: ReservationRequest = {
-//       ...currentReservationRequest,
-//       orders: cart.map((item) => ({
-//         menuItemId: item.id,
-//         quantity: item.quantity,
-//       })),
-//       servingTime:
-//         cart.length > 0
-//           ? servingTime || currentReservationRequest.startTime
-//           : undefined,
-//     }
-
-//     setCurrentReservationRequest(request)
-
-//     let reservation: ReservationResponse | undefined
-
-//     if (currentReservationResponse) {
-//       reservation = await updateReservationOrders(
-//         currentReservationResponse.id,
-//         request
-//       )
-
-//       if (!reservation) {
-//         console.error("Failed to update reservation")
-//         return
-//       }
-//     } else {
-//       reservation = await createReservation(request)
-//     }
-
-//     setCurrentReservationResponse(reservation)
-
-//     if (reservation.status === "Confirmed") {
-//       router.push(`/confirmation?reservationId=${reservation.id}`)
-//     } else if (reservation.status === "PendingPayment") {
-//       router.push("/checkout")
-//     }
-//   }
-
-//   return (
-//     <div className="min-h-screen py-6">
-//       <div className="container mx-auto px-4">
-//         <Button
-//           variant="ghost"
-//           className="mb-4"
-//           onClick={() => router.push(`/restaurants/${id}`)}
-//         >
-//           <ArrowLeft className="h-4 w-4 mr-2" />
-//           Back to Restaurant
-//         </Button>
-
-//         <h1 className="text-2xl md:text-3xl font-bold mb-2">
-//           Pre-order Your Meal
-//         </h1>
-
-//         <p className="text-muted-foreground mb-6">
-//           Select dishes and specify when you want them served
-//         </p>
-
-//         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-//           <div className="lg:col-span-2">
-//             <MenuContent menuItems={menuItems} />
-//           </div>
-
-//           <div className="lg:col-span-1 sticky top-24 space-y-4">
-//             {/* Reservation details */}
-//             <Card>
-//               <CardHeader className="pb-0">
-//                 <CardTitle className="text-base">
-//                   Reservation Details
-//                 </CardTitle>
-//               </CardHeader>
-
-//               <CardContent className="space-y-3 text-sm">
-//                 <div className="flex items-center gap-2">
-//                   <MapPin className="h-4 w-4 text-muted-foreground" />
-//                   <span>{restaurant.name}</span>
-//                 </div>
-
-//                 <div className="flex items-center gap-2">
-//                   <CalendarDays className="h-4 w-4 text-muted-foreground" />
-//                   <span>
-//                     {format(
-//                       parse(
-//                         currentReservationRequest.date,
-//                         "yyyy-MM-dd",
-//                         new Date()
-//                       ),
-//                       "EEEE, MMMM d, yyyy"
-//                     )}
-//                   </span>
-//                 </div>
-
-//                 <div className="flex items-center gap-2">
-//                   <Clock className="h-4 w-4 text-muted-foreground" />
-//                   <span>{currentReservationRequest.startTime}</span>
-//                 </div>
-
-//                 <div className="flex items-center gap-2">
-//                   <Users className="h-4 w-4 text-muted-foreground" />
-//                   <span>
-//                     {currentReservationRequest.guestNumber} guests
-//                   </span>
-//                 </div>
-
-//                 {selectedTable && (
-//                   <div className="flex items-center gap-2">
-//                     <Armchair className="h-4 w-4 text-muted-foreground" />
-//                     <span>
-//                       {selectedTable.location} ({selectedTable.seats} seats)
-//                     </span>
-//                   </div>
-//                 )}
-//               </CardContent>
-//             </Card>
-
-//             {/* Serving time */}
-//             <Card>
-//               <CardHeader className="pb-0">
-//                 <CardTitle className="text-base">
-//                   When to Serve Food?
-//                 </CardTitle>
-//               </CardHeader>
-
-//               <CardContent>
-//                 <Select value={servingTime} onValueChange={setServingTime}>
-//                   <SelectTrigger>
-//                     <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-//                     <SelectValue placeholder="Select serving time" />
-//                   </SelectTrigger>
-
-//                   <SelectContent>
-//                     {availableSlots.map((slot) => (
-//                       <SelectItem key={slot} value={slot}>
-//                         {slot}
-//                       </SelectItem>
-//                     ))}
-//                   </SelectContent>
-//                 </Select>
-
-//                 <p className="text-xs text-muted-foreground mt-2">
-//                   Food will be ready at this time to reduce your wait
-//                 </p>
-//               </CardContent>
-//             </Card>
-
-//             {/* <YourOrder onProceed={handleProceedToCheckout} /> */}
-//             <YourOrder
-//               onProceed={handleProceed}
-//               // disabled={!selectedTable || !date || !time}
-//             />
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   )
-// }
-
 "use client"
 
-import { useEffect, useState } from "react"
+import {
+  type ReactNode,
+  useEffect,
+  useState,
+} from "react"
+
+import {
+  useParams,
+  useRouter,
+} from "next/navigation"
+
 import { useAppStore } from "@/lib/store"
-import { useRouter, useParams } from "next/navigation"
 
 import { MenuContent } from "@/components/menu-content"
 import { YourOrder } from "@/components/order-content"
-import { Button } from "@/components/ui/button"
+import { PageContainer } from "@/components/page-container"
+import { PageHeader } from "@/components/page-header"
 import Loading from "@/components/loading"
 
-import { format, parse } from "date-fns"
-
-import type {
-  Restaurant,
-  MenuItem,
-} from "@/lib/services/restaurant.service"
-
+import { Button } from "@/components/ui/button"
 import {
-  getRestaurantById,
-  getMenuByRestaurant,
-} from "@/lib/services/restaurant.service"
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 import {
   createReservation,
   updateReservationOrders,
 } from "@/lib/services/reservation.service"
+
+import {
+  getMenuByRestaurant,
+  getRestaurantById,
+} from "@/lib/services/restaurant.service"
+
+import type {
+  MenuItem,
+  Restaurant,
+} from "@/lib/types/restaurant.types"
 
 import type {
   ReservationRequest,
@@ -325,28 +56,55 @@ import type {
 } from "@/lib/types/reservation.types"
 
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"
+  formatDate,
+  formatGuestCount,
+  formatTime,
+} from "@/lib/formatters"
 
 import {
-  Card,
-  CardHeader,
-  CardContent,
-  CardTitle,
-} from "@/components/ui/card"
-
-import {
-  Clock,
-  CalendarDays,
-  MapPin,
-  Users,
   ArrowLeft,
   Armchair,
+  CalendarDays,
+  Clock,
+  MapPin,
+  Users,
+  UtensilsCrossed,
 } from "lucide-react"
+
+
+interface ReservationDetailProps {
+  icon: ReactNode
+  label: string
+  value: ReactNode
+}
+
+function ReservationDetail({
+  icon,
+  label,
+  value,
+}: ReservationDetailProps) {
+  return (
+    <div className="flex items-start gap-3">
+
+      <div className="mt-0.5 shrink-0 text-muted-foreground">
+        {icon}
+      </div>
+
+      <div className="min-w-0 flex-1">
+
+        <p className="text-xs text-muted-foreground">
+          {label}
+        </p>
+
+        <div className="mt-0.5 text-sm font-medium leading-snug">
+          {value}
+        </div>
+
+      </div>
+
+    </div>
+  )
+}
 
 
 export default function MenuPage() {
@@ -354,6 +112,7 @@ export default function MenuPage() {
   const router = useRouter()
 
   const id = Number(params.id)
+
 
   const {
     currentReservationRequest,
@@ -365,6 +124,7 @@ export default function MenuPage() {
     cart,
     selectedTable,
   } = useAppStore()
+
 
   const [restaurant, setRestaurant] =
     useState<Restaurant | null>(null)
@@ -386,7 +146,9 @@ export default function MenuPage() {
     startTime: string
   ) => {
     const [hours, minutes] =
-      startTime.split(":").map(Number)
+      startTime
+        .split(":")
+        .map(Number)
 
     const slots: string[] = []
 
@@ -397,7 +159,9 @@ export default function MenuPage() {
         i * 15
 
       const h =
-        Math.floor(totalMinutes / 60)
+        Math.floor(
+          totalMinutes / 60
+        )
 
       const m =
         totalMinutes % 60
@@ -405,9 +169,15 @@ export default function MenuPage() {
       slots.push(
         `${h
           .toString()
-          .padStart(2, "0")}:${m
+          .padStart(
+            2,
+            "0"
+          )}:${m
           .toString()
-          .padStart(2, "0")}`
+          .padStart(
+            2,
+            "0"
+          )}`
       )
     }
 
@@ -419,6 +189,7 @@ export default function MenuPage() {
     if (!currentReservationRequest) {
       return
     }
+
 
     const init = async () => {
       setLoading(true)
@@ -437,49 +208,79 @@ export default function MenuPage() {
           ),
         ])
 
+
         setRestaurant(
-          restaurantResponse?.restaurant ?? null
+          restaurantResponse?.restaurant ??
+            null
         )
+
 
         setMenuItems(
           menuResponse.items
         )
+
 
         const slots =
           generateServingSlots(
             currentReservationRequest.startTime
           )
 
-        setAvailableSlots(slots)
+
+        setAvailableSlots(
+          slots
+        )
+
 
         setServingTime(
           currentReservationRequest.servingTime ??
-          currentReservationRequest.startTime
+            currentReservationRequest.startTime
         )
+
       } finally {
         setLoading(false)
       }
     }
 
+
     void init()
+
   }, [currentReservationRequest])
 
 
   if (!currentReservationRequest) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold mb-4">
-          Please start a reservation first
-        </h1>
+      <PageContainer>
 
-        <Button
-          onClick={() =>
-            router.push(`/restaurants/${id}`)
-          }
-        >
-          Go Back
-        </Button>
-      </div>
+        <div className="mx-auto max-w-md py-16 text-center">
+
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+            <CalendarDays className="h-5 w-5 text-muted-foreground" />
+          </div>
+
+          <h1 className="text-2xl font-bold tracking-tight">
+            Start a reservation first
+          </h1>
+
+          <p className="mt-2 text-muted-foreground">
+            Choose your date, time and table
+            before selecting food.
+          </p>
+
+          <Button
+            type="button"
+            className="mt-6 rounded-xl"
+            onClick={() =>
+              router.push(
+                `/restaurants/${id}`
+              )
+            }
+          >
+            Back to Restaurant
+          </Button>
+
+        </div>
+
+      </PageContainer>
     )
   }
 
@@ -490,7 +291,40 @@ export default function MenuPage() {
 
 
   if (!restaurant) {
-    return null
+    return (
+      <PageContainer>
+        <div className="mx-auto max-w-md py-16 text-center">
+
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+            <MapPin className="h-5 w-5 text-muted-foreground" />
+          </div>
+
+          <h1 className="text-2xl font-bold tracking-tight">
+            Restaurant not found
+          </h1>
+
+          <p className="mt-2 text-muted-foreground">
+            We couldn&apos;t find the restaurant
+            for this reservation.
+          </p>
+
+
+          <Button
+            type="button"
+            className="mt-6 rounded-xl"
+            onClick={() =>
+              router.push(
+                "/restaurants"
+              )
+            }
+          >
+            Browse Restaurants
+          </Button>
+
+        </div>
+
+      </PageContainer>
+    )
   }
 
 
@@ -498,10 +332,14 @@ export default function MenuPage() {
     const request: ReservationRequest = {
       ...currentReservationRequest,
 
-      orders: cart.map((item) => ({
-        menuItemId: item.id,
-        quantity: item.quantity,
-      })),
+
+      orders: cart.map(
+        (item) => ({
+          menuItemId: item.id,
+          quantity: item.quantity,
+        })
+      ),
+
 
       servingTime:
         cart.length > 0
@@ -510,48 +348,61 @@ export default function MenuPage() {
           : undefined,
     }
 
-    setCurrentReservationRequest(request)
+
+    setCurrentReservationRequest(
+      request
+    )
+
 
     try {
-      let reservation: ReservationResponse
+      let reservation:
+        ReservationResponse
+
 
       /*
-       * If reservation already exists, we only update
-       * its food preorder.
+       * Reservation may already exist if the
+       * user previously created the booking.
        *
-       * If it does not exist yet, we create it.
+       * In that case we only update the food
+       * preorder.
+       *
+       * Otherwise we create the reservation
+       * together with the selected food.
        */
       if (currentReservationResponse) {
         reservation =
           await updateReservationOrders(
             currentReservationResponse.id,
             {
-              orders: request.orders,
-              servingTime: request.servingTime,
+              orders:
+                request.orders,
+
+              servingTime:
+                request.servingTime,
             }
           )
       } else {
         reservation =
-          await createReservation(request)
+          await createReservation(
+            request
+          )
       }
+
 
       setCurrentReservationResponse(
         reservation
       )
 
+
       /*
-       * NEW FLOW:
+       * No food was selected.
        *
-       * Reservation status no longer tells us
-       * whether payment is required.
-       *
-       * We use paymentStatus for that.
+       * The table reservation is confirmed and
+       * no payment is required.
        */
-
-
-      // No food -> nothing to pay.
       if (
-        reservation.status === "Confirmed" &&
+        reservation.status ===
+          "Confirmed" &&
         reservation.paymentStatus ===
           "NotRequired"
       ) {
@@ -563,9 +414,20 @@ export default function MenuPage() {
       }
 
 
-      // Food preorder exists -> go to checkout.
+      /*
+       * Food preorder exists.
+       *
+       * Payment is NOT started here.
+       *
+       * Checkout owns the payment flow and will
+       * call startReservationPayment().
+       *
+       * Failed is also allowed because the user
+       * may return to checkout and retry payment.
+       */
       if (
-        reservation.status === "Confirmed" &&
+        reservation.status ===
+          "Confirmed" &&
         (
           reservation.paymentStatus ===
             "NotStarted" ||
@@ -573,7 +435,9 @@ export default function MenuPage() {
             "Failed"
         )
       ) {
-        router.push("/checkout")
+        router.push(
+          "/checkout"
+        )
 
         return
       }
@@ -584,6 +448,7 @@ export default function MenuPage() {
         reservation.status,
         reservation.paymentStatus
       )
+
     } catch (error) {
       console.error(
         "Failed to create/update reservation:",
@@ -594,174 +459,222 @@ export default function MenuPage() {
 
 
   return (
-    <div className="min-h-screen py-6">
-      <div className="container mx-auto px-4">
+    <PageContainer>
+      {/* Back navigation */}
+      <Button
+        type="button"
+        variant="ghost"
+        className="-ml-2 mb-4 text-muted-foreground"
+        onClick={() =>
+          router.push(
+            `/restaurants/${id}`
+          )
+        }
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Restaurant
+      </Button>
 
-        <Button
-          variant="ghost"
-          className="mb-4"
-          onClick={() =>
-            router.push(
-              `/restaurants/${id}`
-            )
-          }
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Restaurant
-        </Button>
+      {/* Page heading */}
+      <PageHeader
+        title="Pre-order Your Meal"
+        description="Choose your dishes and serving time before checkout if you'd like to pre-order"
+      />
 
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_380px]">
 
-        <h1 className="text-2xl md:text-3xl font-bold mb-2">
-          Pre-order Your Meal
-        </h1>
+        {/* ==================================================
+            MENU
+        ================================================== */}
 
-        <p className="text-muted-foreground mb-6">
-          Select dishes and specify when
-          you want them served
-        </p>
-
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          <div className="lg:col-span-2">
-            <MenuContent
-              menuItems={menuItems}
-            />
-          </div>
+        <MenuContent
+          menuItems={menuItems}
+        />
 
 
-          <div className="lg:col-span-1 sticky top-24 space-y-4">
+        {/* ==================================================
+            SIDEBAR
+        ================================================== */}
 
-            {/* Reservation details */}
+        <aside className="h-fit space-y-4 lg:sticky lg:top-24">
 
-            <Card>
-              <CardHeader className="pb-0">
-                <CardTitle className="text-base">
-                  Reservation Details
-                </CardTitle>
-              </CardHeader>
 
-              <CardContent className="space-y-3 text-sm">
-
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span>
-                    {restaurant.name}
-                  </span>
+          {/* Reservation Details */}
+          <Card className="rounded-2xl border shadow-sm">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                  <CalendarDays className="h-4 w-4 text-primary" />
                 </div>
 
+                <div>
+                  <CardTitle className="text-base">
+                    Reservation Details
+                  </CardTitle>
 
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
-
-                  <span>
-                    {format(
-                      parse(
-                        currentReservationRequest.date,
-                        "yyyy-MM-dd",
-                        new Date()
-                      ),
-                      "EEEE, MMMM d, yyyy"
-                    )}
-                  </span>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Review your booking before checkout
+                  </p>
                 </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+
+              <ReservationDetail
+                icon={
+                  <MapPin className="h-4 w-4" />
+                }
+                label="Restaurant"
+                value={restaurant.name}
+              />
 
 
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-
-                  <span>
-                    {
-                      currentReservationRequest.startTime
-                    }
-                  </span>
-                </div>
-
-
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-
-                  <span>
-                    {
-                      currentReservationRequest.guestNumber
-                    }{" "}
-                    guests
-                  </span>
-                </div>
+              <ReservationDetail
+                icon={
+                  <CalendarDays className="h-4 w-4" />
+                }
+                label="Date"
+                value={
+                  formatDate(
+                    currentReservationRequest.date
+                  )
+                }
+              />
 
 
-                {selectedTable && (
-                  <div className="flex items-center gap-2">
-                    <Armchair className="h-4 w-4 text-muted-foreground" />
+              <ReservationDetail
+                icon={
+                  <Clock className="h-4 w-4" />
+                }
+                label="Reservation Time"
+                value={
+                  formatTime(
+                    currentReservationRequest.startTime
+                  )
+                }
+              />
 
-                    <span>
-                      {selectedTable.location}
-                      {" "}
-                      ({selectedTable.seats} seats)
-                    </span>
+
+              <ReservationDetail
+                icon={
+                  <Users className="h-4 w-4" />
+                }
+                label="Party Size"
+                value={
+                  formatGuestCount(
+                    currentReservationRequest.guestNumber
+                  )
+                }
+              />
+
+
+              <ReservationDetail
+                icon={
+                  <Armchair className="h-4 w-4" />
+                }
+                label="Table"
+                value={
+                  selectedTable
+                    ? `${selectedTable.location} · ${selectedTable.seats} seats`
+                    : "Selected table"
+                }
+
+              />
+
+              {/* Serving time */}
+              {cart.length > 0 && (
+                <>
+
+                  <Separator />
+
+
+                  <div className="rounded-xl bg-muted/30 p-3">
+
+                    <div className="mb-3 flex items-center gap-3">
+
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background">
+
+                        <Clock className="h-4 w-4 text-primary" />
+
+                      </div>
+
+
+                      <div>
+
+                        <p className="text-sm font-medium">
+                          Serving Time
+                        </p>
+
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          When should your meal be ready?
+                        </p>
+
+                      </div>
+
+                    </div>
+
+
+                    <Select
+                      value={
+                        servingTime
+                      }
+                      onValueChange={
+                        setServingTime
+                      }
+                    >
+
+                      <SelectTrigger className="w-full bg-background">
+
+                        <SelectValue
+                          placeholder="Select serving time"
+                        />
+
+                      </SelectTrigger>
+
+
+                      <SelectContent>
+
+                        {availableSlots.map(
+                          (slot) => (
+
+                            <SelectItem
+                              key={slot}
+                              value={slot}
+                            >
+                              {formatTime(
+                                slot
+                              )}
+                            </SelectItem>
+
+                          )
+                        )}
+
+                      </SelectContent>
+
+                    </Select>
+
                   </div>
-                )}
 
-              </CardContent>
-            </Card>
+                </>
+              )}
 
+            </CardContent>
 
-            {/* Serving time */}
-
-            <Card>
-              <CardHeader className="pb-0">
-                <CardTitle className="text-base">
-                  When to Serve Food?
-                </CardTitle>
-              </CardHeader>
-
-              <CardContent>
-
-                <Select
-                  value={servingTime}
-                  onValueChange={setServingTime}
-                >
-                  <SelectTrigger>
-                    <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-
-                    <SelectValue
-                      placeholder="Select serving time"
-                    />
-                  </SelectTrigger>
+          </Card>
 
 
-                  <SelectContent>
-                    {availableSlots.map(
-                      (slot) => (
-                        <SelectItem
-                          key={slot}
-                          value={slot}
-                        >
-                          {slot}
-                        </SelectItem>
-                      )
-                    )}
-                  </SelectContent>
+          {/* Order */}
+          <YourOrder
+            onProceed={
+              handleProceed
+            }
+          />
 
-                </Select>
+        </aside>
 
-
-                <p className="text-xs text-muted-foreground mt-2">
-                  Food will be ready at this
-                  time to reduce your wait
-                </p>
-
-              </CardContent>
-            </Card>
-
-
-            <YourOrder
-              onProceed={handleProceed}
-            />
-
-          </div>
-        </div>
       </div>
-    </div>
+
+    </PageContainer>
   )
 }

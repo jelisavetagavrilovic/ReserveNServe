@@ -14,10 +14,6 @@ import {
   mockMenuItems,
 } from "../mock-data"
 
-const TEST_CLIENT_SECRET =
-  process.env.NEXT_PUBLIC_STRIPE_TEST_CLIENT_SECRET
-
-
 // ============================================================================
 // MOCK RESERVATIONS API
 // ============================================================================
@@ -575,11 +571,16 @@ export async function startReservationPayment(
   const reservation =
     findReservation(id)
 
-  if (reservation.status !== "Confirmed") {
+
+  if (
+    reservation.status !==
+    "Confirmed"
+  ) {
     throw new Error(
       "Payment cannot be started for this reservation"
     )
   }
+
 
   if (
     reservation.orders.length === 0 ||
@@ -590,31 +591,66 @@ export async function startReservationPayment(
     )
   }
 
+
   if (
-    reservation.paymentStatus !== "NotStarted" &&
-    reservation.paymentStatus !== "Failed"
+    reservation.paymentStatus !==
+      "NotStarted" &&
+    reservation.paymentStatus !==
+      "Failed"
   ) {
     throw new Error(
       "Payment cannot be started in the current payment state"
     )
   }
 
-  if (!TEST_CLIENT_SECRET) {
+
+  /*
+   * ========================================================
+   * TEMPORARY MOCK CLIENT SECRET
+   * ========================================================
+   *
+   * Replace this manually whenever a new Stripe
+   * test PaymentIntent is created.
+   *
+   * LATER:
+   *
+   * DELETE this variable completely.
+   *
+   * The real Reservations API will return
+   * clientSecret from:
+   *
+   * POST /api/reservations/{id}/payment
+   */
+  const testClientSecret =
+    "pi_3U5Wb7EQ4S80Rhls0lI3ASHz_secret_veMFAJozxfBD2MSfdLhp74Xwi"
+
+
+  if (!testClientSecret) {
     throw new Error(
       "Stripe test client secret is not configured"
     )
   }
 
+
   const updated: ReservationResponse = {
     ...reservation,
-    paymentStatus: "Pending",
+
+    paymentStatus:
+      "Pending",
   }
 
-  saveReservation(updated)
+
+  saveReservation(
+    updated
+  )
+
 
   return {
-    clientSecret: TEST_CLIENT_SECRET,
-    paymentStatus: "Pending",
+    clientSecret:
+      testClientSecret,
+
+    paymentStatus:
+      "Pending",
   }
 }
 
@@ -693,23 +729,4 @@ export async function cancelReservation(
   }
 
   saveReservation(updated)
-}
-
-
-/**
- * TEMPORARY compatibility alias.
- *
- * The old frontend used deleteReservation().
- *
- * The backend does not physically delete reservations,
- * so new frontend code should use cancelReservation().
- *
- * TODO:
- * Remove this function after all old calls to
- * deleteReservation() have been replaced.
- */
-export async function deleteReservation(
-  id: string
-): Promise<void> {
-  return cancelReservation(id)
 }

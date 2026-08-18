@@ -1,7 +1,4 @@
 export {
-  confirmMockPayment,
-  failMockPayment,
-  completeMockRefund,
-  failMockRefund,
+  reconcileRefundStatus
 } from "../api/payment.api"
 

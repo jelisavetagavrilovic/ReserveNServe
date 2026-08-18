@@ -1,44 +1,44 @@
 "use client"
 
-import { useState } from "react"
+import {
+  type FormEvent,
+  useState,
+} from "react"
+
 import { useRouter } from "next/navigation"
+
+import {
+  CardElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js"
 
 import { useAppStore } from "@/lib/store"
 
 import {
   startReservationPayment,
-} from "@/lib/services/reservation.service"
+} from "@/lib/api/reservation.api"
 
 import {
-  confirmMockPayment,
-  failMockPayment,
-} from "@/lib/services/payment.service"
+  reconcilePaymentStatus,
+} from "@/lib/api/payment.api"
+
+import {
+  formatCurrency,
+} from "@/lib/formatters"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card"
-
-import {
+  AlertCircle,
+  CheckCircle2,
   CreditCard,
   Loader2,
   Lock,
-  CheckCircle2,
   RotateCcw,
 } from "lucide-react"
-
-import {
-  CardElement,
-  useStripe,
-  useElements,
-} from "@stripe/react-stripe-js"
 
 
 export function Payment() {
@@ -47,10 +47,15 @@ export function Payment() {
   const stripe = useStripe()
   const elements = useElements()
 
+
   const {
     currentReservationResponse,
     updateCurrentReservationResponse,
   } = useAppStore()
+
+
+  const [cardholderName, setCardholderName] =
+    useState("")
 
   const [isProcessing, setIsProcessing] =
     useState(false)
@@ -58,22 +63,9 @@ export function Payment() {
   const [errorMessage, setErrorMessage] =
     useState("")
 
-  const [cardholderName, setCardholderName] =
-    useState("")
-
 
   if (!currentReservationResponse) {
-    return (
-      <div className="text-center py-16">
-        <p>No reservation in progress</p>
-
-        <Button
-          onClick={() => router.push("/")}
-        >
-          Go Home
-        </Button>
-      </div>
-    )
+    return null
   }
 
 
@@ -83,14 +75,9 @@ export function Payment() {
   const totalAmount =
     reservation.totalAmount ?? 0
 
-  const formattedTotal =
-    new Intl.NumberFormat("sr-RS", {
-      style: "currency",
-      currency: "RSD",
-    }).format(totalAmount)
-
   const paymentStatus =
     reservation.paymentStatus
+
 
   const isRetry =
     paymentStatus === "Failed"
@@ -101,53 +88,49 @@ export function Payment() {
   const isPaid =
     paymentStatus === "Succeeded"
 
+  const canStartPayment =
+    paymentStatus === "NotStarted" ||
+    paymentStatus === "Failed"
+
 
   const handleSubmit = async (
-    e: React.FormEvent
+    event: FormEvent<HTMLFormElement>
   ) => {
-    e.preventDefault()
+    event.preventDefault()
 
     if (!stripe || !elements) {
       setErrorMessage(
-        "Stripe is not ready yet."
+        "Payment form is not ready yet."
       )
+
       return
     }
 
     if (!cardholderName.trim()) {
       setErrorMessage(
-        "Please enter cardholder name."
+        "Please enter the cardholder name."
       )
+
       return
     }
 
-    /*
-     * Payment can be started:
-     *
-     * NotStarted -> first payment attempt
-     * Failed     -> retry
-     *
-     * Pending and Succeeded must not start
-     * another payment attempt.
-     */
-    if (
-      paymentStatus !== "NotStarted" &&
-      paymentStatus !== "Failed"
-    ) {
+    if (!canStartPayment) {
       setErrorMessage(
         "Payment cannot be started in the current state."
       )
+
       return
     }
 
-
     const cardElement =
-      elements.getElement(CardElement)
-
+      elements.getElement(
+        CardElement
+      )
     if (!cardElement) {
       setErrorMessage(
-        "Card element is not available."
+        "Card details are not available."
       )
+
       return
     }
 
@@ -157,81 +140,33 @@ export function Payment() {
 
 
     try {
-      /*
-       * ======================================================
-       * STEP 1 — START PAYMENT
-       * ======================================================
-       *
-       * CURRENT MOCK:
-       *
-       * startReservationPayment() changes our local
-       * reservation:
-       *
-       * NotStarted -> Pending
-       *
-       * or:
-       *
-       * Failed -> Pending
-       *
-       * and returns the REAL Stripe clientSecret
-       * that you manually configured for testing.
-       *
-       *
-       * LATER:
-       *
-       * The component does NOT change.
-       *
-       * startReservationPayment() will really call:
-       *
-       * POST /api/reservations/{id}/payment
-       *
-       * Reservations Service
-       *      ->
-       * Payment Service
-       *      ->
-       * Stripe
-       *
-       * and the backend will return clientSecret.
-       */
       const payment =
         await startReservationPayment(
           reservation.id
         )
 
-
-      /*
-       * Synchronize frontend state with
-       * Reservations state:
-       *
-       * paymentStatus = Pending
-       */
       updateCurrentReservationResponse({
         ...reservation,
+
         paymentStatus:
           payment.paymentStatus,
       })
 
 
       /*
-       * ======================================================
-       * STEP 2 — CONFIRM PAYMENT WITH REAL STRIPE
-       * ======================================================
-       *
-       * Card details entered into CardElement
-       * are sent directly to Stripe.
-       *
-       * Our application never receives the raw
-       * card number.
+       * Stripe handles the raw card data.
        */
       const result =
         await stripe.confirmCardPayment(
           payment.clientSecret,
           {
             payment_method: {
-              card: cardElement,
+              card:
+                cardElement,
 
               billing_details: {
-                name: cardholderName.trim(),
+                name:
+                  cardholderName.trim(),
               },
             },
           }
@@ -239,39 +174,19 @@ export function Payment() {
 
 
       /*
-       * ======================================================
-       * STEP 3A — STRIPE PAYMENT FAILED
-       * ======================================================
+       * Immediate Stripe error.
        */
       if (result.error) {
-        /*
-         * MOCK ONLY
-         *
-         * In production this will NOT be called
-         * from the frontend.
-         *
-         * Real flow:
-         *
-         * Stripe webhook
-         *      ->
-         * Payment Service
-         *      ->
-         * Reservations Service
-         *
-         * PaymentFailed
-         *
-         * For now we simulate that callback.
-         */
-        const failedReservation =
-          await failMockPayment(
-            reservation.id
+
+        const updatedReservation =
+          await reconcilePaymentStatus(
+            reservation.id,
+            "failed"
           )
 
-
         updateCurrentReservationResponse(
-          failedReservation
+          updatedReservation
         )
-
 
         setErrorMessage(
           result.error.message ??
@@ -283,313 +198,342 @@ export function Payment() {
 
 
       /*
-       * ======================================================
-       * STEP 3B — STRIPE PAYMENT SUCCEEDED
-       * ======================================================
+       * Stripe succeeded.
        */
       if (
         result.paymentIntent?.status ===
         "succeeded"
       ) {
-        /*
-         * MOCK ONLY
-         *
-         * Again, frontend normally would NOT
-         * tell Reservations Service that payment
-         * succeeded.
-         *
-         * Real production flow:
-         *
-         * Stripe
-         *      ->
-         * webhook
-         *      ->
-         * Payment Service
-         *      ->
-         * Reservations Service
-         *
-         * PaymentSucceeded
-         *
-         * For now we simulate that callback.
-         */
-        const succeededReservation =
-          await confirmMockPayment(
-            reservation.id
+
+        const updatedReservation =
+          await reconcilePaymentStatus(
+            reservation.id,
+            "succeeded"
           )
 
 
         updateCurrentReservationResponse(
-          succeededReservation
+          updatedReservation
         )
 
 
         router.push(
-          `/confirmation?reservationId=${succeededReservation.id}`
+          `/confirmation?reservationId=${updatedReservation.id}`
         )
+
 
         return
       }
 
 
-      /*
-       * Stripe returned no error, but payment
-       * is not in a final succeeded state.
-       *
-       * This normally should be handled according
-       * to the PaymentIntent state / webhook.
-       */
       setErrorMessage(
         "Payment is still being processed."
       )
 
     } catch (error) {
+
       console.error(
         "Payment error:",
         error
       )
 
+
       /*
-       * Important:
+       * Do not manually force Failed here.
        *
-       * We do NOT blindly set Failed here.
-       *
-       * The exception may have happened before
-       * Stripe even processed the payment
-       * (network error, bad clientSecret, etc.).
-       *
-       * In the real system Payment Service /
-       * Stripe webhook will be the source of truth.
+       * An exception does not necessarily mean
+       * Stripe rejected the payment.
        */
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Payment failed. Please try again."
+          : "Payment could not be completed. Please try again."
       )
+
     } finally {
+
       setIsProcessing(false)
+
     }
   }
 
 
   return (
-    <div className="lg:sticky lg:top-24 h-fit">
+    <div>
 
-      <Card>
+      {/* Payment heading */}
+      <div className="mb-5">
 
-        <CardHeader>
+        <div className="flex items-center gap-2">
 
-          <CardTitle className="text-lg">
-            Payment Details
-          </CardTitle>
+          <CreditCard className="h-4 w-4 text-primary" />
 
-          <CardDescription>
-            Enter your card details to complete
-            your food preorder
-          </CardDescription>
+          <h3 className="text-base font-semibold">
+            Payment
+          </h3>
 
-        </CardHeader>
+        </div>
+
+        <p className="mt-1 text-xs text-muted-foreground">
+          Complete payment for your food pre-order
+        </p>
+
+      </div>
 
 
-        <CardContent>
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-5"
+      >
 
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-5"
+        {/* Name */}
+        <div className="space-y-2">
+
+          <Label htmlFor="cardholderName">
+            Name on Card
+          </Label>
+
+
+          <Input
+            id="cardholderName"
+            type="text"
+            autoComplete="cc-name"
+            placeholder="John Doe"
+            value={
+              cardholderName
+            }
+            onChange={(event) => {
+
+              setCardholderName(
+                event.target.value
+              )
+
+
+              if (errorMessage) {
+                setErrorMessage("")
+              }
+
+            }}
+            disabled={
+              isProcessing ||
+              isPending ||
+              isPaid
+            }
+            className="h-11"
+          />
+
+        </div>
+
+
+        {/* Card */}
+        <div className="space-y-2">
+
+          <Label>
+            Card Details
+          </Label>
+
+
+          <div
+            className="
+              rounded-lg
+              border
+              bg-background
+              px-3
+              py-4
+              transition-colors
+              focus-within:border-primary/50
+              focus-within:ring-1
+              focus-within:ring-primary/20
+            "
           >
 
-            <Card>
+            <CardElement
+              options={{
+                hidePostalCode:
+                  true,
 
-              <CardHeader>
+                disabled:
+                  isProcessing ||
+                  isPending ||
+                  isPaid,
+              }}
+            />
 
-                <CardTitle className="flex items-center gap-2 text-base">
-
-                  <CreditCard className="h-4 w-4" />
-
-                  Credit / Debit Card
-
-                </CardTitle>
-
-              </CardHeader>
-
-
-              <CardContent className="space-y-4">
-
-                <div className="space-y-4 pt-4 border-t">
-
-                  {/* Cardholder name */}
-
-                  <div className="space-y-2">
-
-                    <Label htmlFor="cardName">
-                      Name on Card
-                    </Label>
-
-                    <Input
-                      id="cardName"
-                      placeholder="John Doe"
-                      value={cardholderName}
-                      onChange={(e) =>
-                        setCardholderName(
-                          e.target.value
-                        )
-                      }
-                      disabled={
-                        isProcessing ||
-                        isPending ||
-                        isPaid
-                      }
-                    />
-
-                  </div>
+          </div>
 
 
-                  {/*
-                   * REAL STRIPE ELEMENT
-                   *
-                   * You can enter Stripe test cards
-                   * directly here.
-                   *
-                   * Stripe owns the sensitive card
-                   * information.
-                   */}
-                  <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
 
-                    <Label>
-                      Card Details
-                    </Label>
+            <Lock className="h-3 w-3 shrink-0" />
 
-                    <div className="border rounded-md px-3 py-4">
+            <span>
+              Securely processed by Stripe
+            </span>
 
-                      <CardElement
-                        options={{
-                          hidePostalCode: true,
+          </div>
 
-                          disabled:
-                            isProcessing ||
-                            isPending ||
-                            isPaid,
-                        }}
-                      />
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-              </CardContent>
-
-            </Card>
+        </div>
 
 
-            {/* Current payment state */}
+        {/* Failed */}
+        {isRetry && (
+          <div className="rounded-xl bg-destructive/5 p-3">
 
-            {isRetry && (
-              <div className="rounded-md border p-3">
-                <p className="text-sm text-destructive">
-                  Previous payment attempt failed.
-                  You can try again.
+            <div className="flex items-start gap-2">
+
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+
+
+              <div>
+
+                <p className="text-sm font-medium text-destructive">
+                  Payment failed
                 </p>
-              </div>
-            )}
 
-
-            {isPending && (
-              <div className="rounded-md border p-3">
-                <p className="text-sm text-muted-foreground">
-                  Payment is being processed.
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Check your card details and try again.
                 </p>
+
               </div>
-            )}
+
+            </div>
+
+          </div>
+        )}
 
 
-            {isPaid && (
-              <div className="rounded-md border p-3">
-                <div className="flex items-center gap-2">
+        {/* Pending */}
+        {isPending && (
+          <div className="rounded-xl bg-muted/50 p-3">
 
-                  <CheckCircle2 className="h-4 w-4" />
+            <div className="flex items-start gap-2">
 
-                  <p className="text-sm">
-                    Payment completed successfully.
-                  </p>
+              <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
 
-                </div>
+
+              <div>
+
+                <p className="text-sm font-medium">
+                  Processing payment
+                </p>
+
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Please wait while your payment is confirmed.
+                </p>
+
               </div>
-            )}
+
+            </div>
+
+          </div>
+        )}
 
 
-            {/* Error */}
+        {/* Paid */}
+        {isPaid && (
+          <div className="rounded-xl bg-primary/5 p-3">
 
-            {errorMessage && (
+            <div className="flex items-start gap-2">
+
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+
+
+              <div>
+
+                <p className="text-sm font-medium">
+                  Payment completed
+                </p>
+
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Your food pre-order has been paid successfully.
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+
+        {/* Error */}
+        {errorMessage && !isRetry && (
+          <div className="rounded-xl bg-destructive/5 p-3">
+
+            <div className="flex items-start gap-2">
+
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+
               <p className="text-sm text-destructive">
                 {errorMessage}
               </p>
-            )}
+
+            </div>
+
+          </div>
+        )}
 
 
-            {/*
-             * BUTTON STATE
-             *
-             * NotStarted
-             *    -> Pay $...
-             *
-             * Failed
-             *    -> Retry Payment $...
-             *
-             * Pending
-             *    -> Processing...
-             *
-             * Succeeded
-             *    -> Paid
-             */}
+        {/* Pay */}
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full rounded-xl"
+          disabled={
+            !stripe ||
+            !elements ||
+            !cardholderName.trim() ||
+            !canStartPayment ||
+            isProcessing ||
+            isPending ||
+            isPaid
+          }
+        >
 
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full"
-              disabled={
-                !stripe ||
-                !elements ||
-                !cardholderName.trim() ||
-                isProcessing ||
-                isPending ||
-                isPaid
-              }
-            >
+          {isProcessing ||
+          isPending ? (
 
-              {isProcessing || isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
 
-                  Processing...
-                </>
-              ) : isPaid ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
+              Processing...
+            </>
 
-                  Paid
-                </>
-              ) : isRetry ? (
-                <>
-                  <RotateCcw className="h-4 w-4 mr-2" />
+          ) : isPaid ? (
 
-                  Retry Payment {formattedTotal}
-                </>
-              ) : (
-                <>
-                  <Lock className="h-4 w-4 mr-2" />
+            <>
+              <CheckCircle2 className="mr-2 h-4 w-4" />
 
-                  Pay {formattedTotal}
-                </>
+              Paid
+            </>
+
+          ) : isRetry ? (
+
+            <>
+              <RotateCcw className="mr-2 h-4 w-4" />
+
+              Retry Payment{" "}
+              {formatCurrency(
+                totalAmount
               )}
+            </>
 
-            </Button>
+          ) : (
 
-          </form>
+            <>
+              <Lock className="mr-2 h-4 w-4" />
 
-        </CardContent>
+              Pay{" "}
+              {formatCurrency(
+                totalAmount
+              )}
+            </>
 
-      </Card>
+          )}
+
+        </Button>
+
+      </form>
 
     </div>
   )

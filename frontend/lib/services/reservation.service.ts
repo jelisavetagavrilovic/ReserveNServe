@@ -5,7 +5,6 @@ export {
   updateReservation,
   updateReservationOrders,
   startReservationPayment,
-  deleteReservation,
   cancelReservation,
 } from "../api/reservation.api"
 

@@ -1,136 +1,343 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import {
+  useEffect,
+  useState,
+} from "react"
+
 import Link from "next/link"
 
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation"
+
 import { useAppStore } from "@/lib/store"
-import { ReservationSummary } from "@/components/reservation-summary"
-import { Card, CardContent } from "@/components/ui/card"
+
+import {
+  getReservationById,
+} from "@/lib/api/reservation.api"
+
+import type {
+  ReservationResponse,
+} from "@/lib/types/reservation.types"
+
+import {
+  ConfirmationSummary,
+} from "@/components/confirmation-summary"
+
+import {
+  PageContainer,
+} from "@/components/page-container"
+
+import Loading from "@/components/loading"
+
 import { Button } from "@/components/ui/button"
 
-import { CheckCircle, Download, Home, Mail } from "lucide-react"
-import { useAuth } from "@/auth/hooks/useAuth"
-import Loading from "./loading"
+import {
+  CalendarDays,
+  CheckCircle2,
+  Home,
+} from "lucide-react"
+
 
 export function ConfirmationContent() {
   const router = useRouter()
-  const { user } = useAuth()
+  const searchParams = useSearchParams()
+
 
   const {
-    currentReservationResponse: reservation,
+    currentReservationResponse,
+
     clearCart,
     setSelectedTable,
     setCurrentReservationRequest,
     setCurrentReservationResponse,
   } = useAppStore()
 
-  const handleFinish = () => {
-    clearCart()
-    setSelectedTable(null)
-    setCurrentReservationRequest(null)
-    setCurrentReservationResponse(null)
-  }
 
+  const reservationId =
+    searchParams.get("reservationId")
+
+
+  const [reservation, setReservation] =
+    useState<ReservationResponse | null>(
+      currentReservationResponse
+    )
+
+  const [loading, setLoading] =
+    useState(
+      !currentReservationResponse
+    )
+
+  const [errorMessage, setErrorMessage] =
+    useState("")
+
+  /*
+   * ==========================================================
+   * LOAD RESERVATION
+   * ==========================================================
+   */
   useEffect(() => {
-    window.history.pushState(null, "", window.location.href)
+    if (!reservationId) {
+      setReservation(null)
+
+      setErrorMessage(
+        "Reservation ID is missing."
+      )
+
+      setLoading(false)
+
+      return
+    }
+
+    /*
+     * If the reservation is already available
+     * in the application store, use it directly.
+     */
+    if (
+      currentReservationResponse?.id ===
+      reservationId
+    ) {
+      setReservation(
+        currentReservationResponse
+      )
+
+      setErrorMessage("")
+      setLoading(false)
+
+      return
+    }
+
+    /*
+     * Otherwise load it through our API/service
+     * contract.
+     *
+     * This also allows confirmation to work after
+     * a page refresh.
+     */
+    const loadReservation =
+      async () => {
+        setLoading(true)
+        setErrorMessage("")
+
+        try {
+          const result =
+            await getReservationById(
+              reservationId
+            )
+
+          setReservation(
+            result
+          )
+
+        } catch (error) {
+          console.error(
+            "Failed to load reservation:",
+            error
+          )
+
+          setReservation(null)
+
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Unable to load reservation."
+          )
+
+        } finally {
+          setLoading(false)
+        }
+      }
+
+
+    void loadReservation()
+
+  }, [
+    reservationId,
+    currentReservationResponse,
+  ])
+
+  /*
+   * Prevent returning to checkout with browser Back
+   * after confirmation has already been shown.
+   */
+  useEffect(() => {
+    window.history.pushState(
+      null,
+      "",
+      window.location.href
+    )
+
 
     const handlePopState = () => {
-      window.history.pushState(null, "", window.location.href)
+      window.history.pushState(
+        null,
+        "",
+        window.location.href
+      )
+
       router.replace("/")
     }
 
-    window.addEventListener("popstate", handlePopState)
+
+    window.addEventListener(
+      "popstate",
+      handlePopState
+    )
+
 
     return () => {
-      window.removeEventListener("popstate", handlePopState)
+      window.removeEventListener(
+        "popstate",
+        handlePopState
+      )
     }
+
   }, [router])
 
-  if (!reservation || !user) return <Loading />
 
-  return (
-    <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4 max-w-2xl">
-        <div className="flex flex-col items-center text-center mb-6">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-4">
-            <CheckCircle className="h-10 w-10 text-green-600" />
-          </div>
+  /*
+   * Clear only temporary reservation-building state.
+   */
+  const handleFinish = () => {
+    clearCart()
 
-          <h2 className="text-3xl font-bold mb-2">
-            Reservation Confirmed!
-          </h2>
+    setSelectedTable(null)
 
-          <p className="text-muted-foreground">
-            Thank you for your booking! Here are your details:
+    setCurrentReservationRequest(
+      null
+    )
+
+    setCurrentReservationResponse(
+      null
+    )
+  }
+
+  if (loading) {
+    return <Loading />
+  }
+
+  if (
+    !reservation ||
+    errorMessage
+  ) {
+    return (
+      <PageContainer className="max-w-xl">
+
+        <div className="py-16 text-center">
+
+          <h1 className="text-2xl font-bold tracking-tight">
+            Reservation not found
+          </h1>
+
+          <p className="mt-2 text-sm text-muted-foreground">
+            {errorMessage ||
+              "We couldn't load your reservation details. Please check your booking confirmation email or try again."}
           </p>
+
+          <Button
+            type="button"
+            className="mt-6 rounded-xl"
+            onClick={() =>
+              router.push(
+                "/bookings"
+              )
+            }
+          >
+            <CalendarDays className="mr-2 h-4 w-4" />
+
+            View My Bookings
+          </Button>
+
         </div>
 
-        <ReservationSummary
-          reservation={reservation}
-          mode="confirmation"
+      </PageContainer>
+    )
+  }
+
+
+  return (
+    <PageContainer>
+      <div className="mx-auto w-full max-w-xl">
+
+        {/* ======================================================
+            SUCCESS HEADER
+        ====================================================== */}
+
+        <div className="mb-7 text-center">
+
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
+            <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+          </div>
+
+          <h1 className="text-3xl font-bold tracking-tight">
+            Reservation Confirmed!
+          </h1>
+
+          <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
+            Your reservation is confirmed and everything is ready for your visit
+          </p>
+
+        </div>
+
+        {/* ======================================================
+            RESERVATION SUMMARY
+        ====================================================== */}
+
+        <ConfirmationSummary
+          reservation={
+            reservation
+          }
         />
 
-        {/* <Card className="bg-muted/50 mb-6 mt-6">
-          <CardContent className="pt-4">
-            <div className="flex items-start gap-2.5">
-              <Mail className="h-5 w-5 text-primary mt-0.5" />
+        {/* ======================================================
+            ACTIONS
+        ====================================================== */}
 
-              <div className="text-sm">
-                {reservation.emailStatus === "Sent" && (
-                  <>
-                    <p className="font-medium">Check Your Email</p>
-                    <p className="text-muted-foreground">
-                      We&apos;ve sent a confirmation email to {user.email}
-                    </p>
-                  </>
-                )}
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
 
-                {reservation.emailStatus === "Pending" && (
-                  <>
-                    <p className="font-medium">Sending Confirmation...</p>
-                    <p className="text-muted-foreground">
-                      Your confirmation email is being prepared.
-                    </p>
-                  </>
-                )}
-
-                {reservation.emailStatus === "Failed" && (
-                  <>
-                    <p className="font-medium">Email Not Sent</p>
-                    <p className="text-muted-foreground">
-                      Your reservation is confirmed, but the email could not be delivered.
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card> */}
-
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Link href="/bookings" className="flex-1">
+          <Link
+            href="/bookings"
+            className="flex-1"
+          >
             <Button
+              type="button"
               variant="outline"
-              className="w-full gap-2 bg-transparent"
-              onClick={handleFinish}
+              size="lg"
+              className="w-full rounded-xl"
+              onClick={
+                handleFinish
+              }
             >
-              <Download className="h-4 w-4" />
+              <CalendarDays className="mr-2 h-4 w-4" />
+
               View My Bookings
             </Button>
           </Link>
 
-          <Link href="/" className="flex-1">
-            <Button 
-              className="w-full gap-2"
-              onClick={handleFinish}
+
+          <Link
+            href="/"
+            className="flex-1"
+          >
+            <Button
+              type="button"
+              size="lg"
+              className="w-full rounded-xl"
+              onClick={
+                handleFinish
+              }
             >
-              <Home className="h-4 w-4" />
+              <Home className="mr-2 h-4 w-4" />
+
               Back to Home
             </Button>
           </Link>
+
         </div>
+
       </div>
-    </div>
+    </PageContainer>
   )
 }

@@ -9,47 +9,27 @@ import {
 
 
 // ============================================================================
-// MOCK PAYMENT API
+// PAYMENT SERVICE
 // ============================================================================
 //
 // IMPORTANT:
 //
-// This file currently simulates the external Payment Service / Stripe flow.
+// Components use ONLY the public functions exported from this file.
 //
-// The Reservations API is responsible for:
+// TODAY:
 //
-//   - starting payment
-//   - storing ReservationPaymentStatus
-//   - starting refund when a paid reservation is cancelled
-//
-// This mock file only simulates what would normally happen asynchronously
-// after Stripe / Payment Service processes a payment or refund.
+// These functions simulate asynchronous Payment Service / Stripe callbacks
+// by updating the local mock reservation.
 //
 // LATER:
 //
-// Most functions in this file will disappear when the real Payment Service
-// and Stripe integration are connected.
+// The public function signatures stay the same.
 //
-// Real flow:
+// Their implementation will stop updating local state and will instead
+// read the reservation state from the real Reservations API after
+// Payment Service / Stripe webhooks have updated it.
 //
-// Frontend
-//    ↓
-// POST /api/reservations/{id}/payment
-//    ↓
-// Reservations Service
-//    ↓
-// Payment Service
-//    ↓
-// Stripe
-//
-// Stripe webhook
-//    ↓
-// Payment Service
-//    ↓
-// Reservations Service internal payment-status endpoint
-//
-// Frontend NEVER directly sets paymentStatus in production.
-//
+// Components do NOT change.
 // ============================================================================
 
 
@@ -63,162 +43,33 @@ function delay(ms = MOCK_PAYMENT_DELAY) {
 }
 
 
-/**
- * TEMPORARY MOCK ONLY.
- *
- * Simulates Stripe / Payment Service reporting that payment succeeded.
- *
- * CURRENT:
- *
- *   Pending
- *      ↓
- *   Succeeded
- *
- * by directly updating our localStorage mock reservation.
- *
- *
- * LATER:
- *
- * DELETE this function.
- *
- * The frontend will use Stripe SDK with the clientSecret returned by:
- *
- *   startReservationPayment(reservationId)
- *
- * Stripe will then send a webhook to Payment Service.
- * Payment Service will notify Reservations Service.
- *
- * Reservations Service becomes the source of truth for:
- *
- *   paymentStatus = Succeeded
- *
- * Frontend should then GET the reservation again.
- */
-export async function confirmMockPayment(
-  reservationId: string
-): Promise<ReservationResponse> {
-  const reservation =
-    await getReservationById(reservationId)
+// ============================================================================
+// PAYMENT
+// ============================================================================
 
-  if (
-    reservation.paymentStatus !== "Pending"
-  ) {
-    throw new Error(
-      "Only a pending payment can be completed"
-    )
-  }
 
-  await delay()
-
-  // MOCK ONLY:
-  // In production frontend must NEVER update
-  // paymentStatus directly.
-  return updateReservation(
-    reservationId,
-    {
-      paymentStatus: "Succeeded",
-    }
-  )
-}
+export type PaymentProviderOutcome =
+  | "succeeded"
+  | "failed"
 
 
 /**
- * TEMPORARY MOCK ONLY.
+ * Synchronizes the reservation after Stripe finishes
+ * processing a payment attempt.
  *
- * Simulates Stripe / Payment Service reporting a failed payment.
  *
- * CURRENT:
+ * TODAY — MOCK:
  *
- *   Pending
+ * Stripe result
  *      ↓
- *   Failed
- *
- *
- * After this, frontend can call:
- *
- *   startReservationPayment(reservationId)
- *
- * again to simulate payment retry.
- *
- *
- * LATER:
- *
- * DELETE this function.
- *
- * Stripe / Payment Service will determine payment failure
- * and Reservations Service will receive:
- *
- *   PaymentFailed
- *
- * through its internal payment status endpoint.
- */
-export async function failMockPayment(
-  reservationId: string
-): Promise<ReservationResponse> {
-  const reservation =
-    await getReservationById(reservationId)
-
-  if (
-    reservation.paymentStatus !== "Pending"
-  ) {
-    throw new Error(
-      "Only a pending payment can fail"
-    )
-  }
-
-  await delay()
-
-  // MOCK ONLY.
-  return updateReservation(
-    reservationId,
-    {
-      paymentStatus: "Failed",
-    }
-  )
-}
-
-
-/**
- * TEMPORARY MOCK ONLY.
- *
- * Simulates successful refund processing.
- *
- * IMPORTANT:
- *
- * Frontend does NOT start the refund.
- *
- * Refund is started automatically when:
- *
- *   cancelReservation(id)
- *
- * is called for a reservation whose paymentStatus is Succeeded.
- *
- * Mock Reservations API changes:
- *
- *   Confirmed / Succeeded
- *
- * into:
- *
- *   Cancelled / RefundPending
- *
- * This function only simulates Payment Service later reporting:
- *
- *   RefundPending
- *       ↓
- *   Refunded
- *
- *
- * LATER:
- *
- * DELETE this function.
- *
- * Real flow:
- *
- * Reservations Service
+ * reconcilePaymentStatus()
  *      ↓
- * Payment Service
- *      ↓
- * Stripe refund
+ * directly updates local mock reservation
+ *
+ *
+ * LATER — REAL:
+ *
+ * Stripe result
  *      ↓
  * Stripe webhook
  *      ↓
@@ -226,77 +77,113 @@ export async function failMockPayment(
  *      ↓
  * Reservations Service
  *
- * Frontend only reads the resulting reservation state.
+ * reconcilePaymentStatus() will only wait for / reload
+ * the resulting reservation state.
+ *
+ *
+ * IMPORTANT:
+ *
+ * The component never directly sets paymentStatus.
  */
-export async function completeMockRefund(
-  reservationId: string
+export async function reconcilePaymentStatus(
+  reservationId: string,
+  outcome: PaymentProviderOutcome
 ): Promise<ReservationResponse> {
   const reservation =
-    await getReservationById(reservationId)
-
-  if (
-    reservation.status !== "Cancelled"
-  ) {
-    throw new Error(
-      "Refund can only complete for a cancelled reservation"
+    await getReservationById(
+      reservationId
     )
-  }
+
 
   if (
     reservation.paymentStatus !==
-    "RefundPending"
+    "Pending"
   ) {
     throw new Error(
-      "Refund is not pending"
+      "Only a pending payment can be reconciled"
     )
   }
 
+
   await delay()
 
-  // MOCK ONLY.
+
+  /*
+   * MOCK ONLY.
+   *
+   * In production this function must NEVER
+   * update paymentStatus directly.
+   *
+   * The backend will already contain the
+   * status received from Payment Service.
+   */
   return updateReservation(
     reservationId,
     {
-      paymentStatus: "Refunded",
+      paymentStatus:
+        outcome === "succeeded"
+          ? "Succeeded"
+          : "Failed",
     }
   )
 }
 
 
+// ============================================================================
+// REFUND
+// ============================================================================
+
+
+export type RefundProviderOutcome =
+  | "succeeded"
+  | "failed"
+
+
 /**
- * TEMPORARY MOCK ONLY.
- *
- * Simulates failed refund processing.
- *
- * CURRENT:
- *
- *   Cancelled / RefundPending
- *
- * becomes:
- *
- *   Cancelled / RefundFailed
+ * Synchronizes the reservation after the external
+ * Payment Service finishes processing a refund.
  *
  *
- * LATER:
+ * TODAY — MOCK:
  *
- * DELETE this function.
+ * RefundPending
+ *      ↓
+ * reconcileRefundStatus()
+ *      ↓
+ * Refunded / RefundFailed
  *
- * Refund failure will be reported by Payment Service
- * to Reservations Service.
+ *
+ * LATER — REAL:
+ *
+ * Stripe refund
+ *      ↓
+ * webhook
+ *      ↓
+ * Payment Service
+ *      ↓
+ * Reservations Service
+ *
+ * Frontend only reloads the resulting state.
  */
-export async function failMockRefund(
-  reservationId: string
+export async function reconcileRefundStatus(
+  reservationId: string,
+  outcome: RefundProviderOutcome
 ): Promise<ReservationResponse> {
   const reservation =
-    await getReservationById(reservationId)
+    await getReservationById(
+      reservationId
+    )
+
 
   if (
-    reservation.status !== "Cancelled"
+    reservation.status !==
+    "Cancelled"
   ) {
     throw new Error(
-      "Refund can only fail for a cancelled reservation"
+      "Refund can only be reconciled for a cancelled reservation"
     )
   }
+
 
   if (
     reservation.paymentStatus !==
@@ -307,13 +194,23 @@ export async function failMockRefund(
     )
   }
 
+
   await delay()
 
-  // MOCK ONLY.
+
+  /*
+   * MOCK ONLY.
+   *
+   * In production the Reservations Service
+   * will already contain this state.
+   */
   return updateReservation(
     reservationId,
     {
-      paymentStatus: "RefundFailed",
+      paymentStatus:
+        outcome === "succeeded"
+          ? "Refunded"
+          : "RefundFailed",
     }
   )
 }

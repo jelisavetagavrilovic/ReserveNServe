@@ -1,103 +1,282 @@
 "use client"
 
 import Image from "next/image"
+
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger, } from "@/components/ui/tabs"
-import { Plus, Minus } from "lucide-react"
-import type { MenuItem } from "@/lib/types/restaurant.types"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
+
+import {
+  Minus,
+  Plus,
+} from "lucide-react"
+
+import type {
+  MenuCategory,
+  MenuItem,
+} from "@/lib/types/restaurant.types"
+
 import { useAppStore } from "@/lib/store"
 import { getImageSrc } from "@/lib/utils"
+import { formatCurrency } from "@/lib/formatters"
+
 
 interface MenuContentProps {
   menuItems: MenuItem[]
 }
 
-export function MenuContent({ menuItems }: MenuContentProps) {
-  const { cart, addToCart, updateCartItemQuantity } = useAppStore()
 
-  const groupedMenuItems = {
-    appetizer: menuItems.filter((m) => m.category === "appetizer"),
-    main: menuItems.filter((m) => m.category === "main"),
-    dessert: menuItems.filter((m) => m.category === "dessert"),
-    drinks: menuItems.filter((m) => m.category === "drinks"),
+const categories: {
+  value: MenuCategory
+  label: string
+}[] = [
+  {
+    value: "appetizer",
+    label: "Appetizers",
+  },
+  {
+    value: "main",
+    label: "Mains",
+  },
+  {
+    value: "dessert",
+    label: "Desserts",
+  },
+  {
+    value: "drinks",
+    label: "Drinks",
+  },
+]
+
+
+export function MenuContent({
+  menuItems,
+}: MenuContentProps) {
+  const {
+    cart,
+    addToCart,
+    updateCartItemQuantity,
+  } = useAppStore()
+
+
+  const groupedMenuItems: Record<
+    MenuCategory,
+    MenuItem[]
+  > = {
+    appetizer: menuItems.filter(
+      (item) => item.category === "appetizer"
+    ),
+
+    main: menuItems.filter(
+      (item) => item.category === "main"
+    ),
+
+    dessert: menuItems.filter(
+      (item) => item.category === "dessert"
+    ),
+
+    drinks: menuItems.filter(
+      (item) => item.category === "drinks"
+    ),
   }
 
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Menu</CardTitle>
+    <Card className="rounded-2xl border shadow-sm">
+
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg">
+          Menu
+        </CardTitle>
+
+        <p className="text-sm text-muted-foreground">
+          Choose dishes to pre-order for your reservation
+        </p>
       </CardHeader>
+
+
       <CardContent>
-        <Tabs defaultValue="appetizer">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="appetizer">Appetizers</TabsTrigger>
-            <TabsTrigger value="main">Mains</TabsTrigger>
-            <TabsTrigger value="dessert">Desserts</TabsTrigger>
-            <TabsTrigger value="drinks">Drinks</TabsTrigger>
+        <Tabs
+          defaultValue="appetizer"
+          className="space-y-4"
+        >
+
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-lg bg-muted/60 p-1 sm:grid-cols-4">
+
+            {categories.map((category) => (
+              <TabsTrigger
+                key={category.value}
+                value={category.value}
+                className="rounded-md"
+              >
+                {category.label}
+              </TabsTrigger>
+            ))}
+
           </TabsList>
 
-          {(["appetizer", "main", "dessert", "drinks"] as const).map((category) => (
-            <TabsContent key={category} value={category} className="space-y-4">
-              {groupedMenuItems[category].map((item) => {
-                const cartItem = cart.find((c) => c.id === item.id)
-                return (
-                  <div
-                    key={item.id}
-                    className="flex gap-4 p-4 rounded-lg border hover:border-primary/50 transition-colors"
-                  >
-                    <div className="relative h-24 w-24 rounded-lg overflow-hidden flex-shrink-0">
-                      <Image
-                        src={getImageSrc(item.image) || "/placeholder.svg"}
-                        alt={item.food_name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <h4 className="font-semibold">{item.food_name}</h4>
-                        <span className="font-bold text-primary whitespace-nowrap">${item.price}</span>
+
+          {categories.map((category) => (
+            <TabsContent
+              key={category.value}
+              value={category.value}
+              className="mt-0 space-y-3"
+            >
+
+              {groupedMenuItems[category.value].length === 0 ? (
+
+                <div className="rounded-lg border border-dashed px-4 py-8 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No items available in this category.
+                  </p>
+                </div>
+
+              ) : (
+
+                groupedMenuItems[category.value].map((item) => {
+                  const cartItem = cart.find(
+                    (cartItem) =>
+                      cartItem.id === item.id
+                  )
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="group flex gap-4 rounded-xl border bg-card p-3 transition-all hover:border-primary/30 hover:shadow-sm"
+                    >
+
+                      {/* Image */}
+                      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+
+                        <Image
+                          src={
+                            getImageSrc(item.image) ||
+                            "/placeholder.svg"
+                          }
+                          alt={item.food_name}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{item.description}</p>
-                    </div>
-                    <div className="flex flex-col items-end justify-between">
-                      {cartItem ? (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-8 w-8 bg-transparent"
-                            onClick={() => updateCartItemQuantity(item.id, cartItem.quantity - 1)}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
 
-                          <span className="w-8 text-center font-medium">{cartItem.quantity}</span>
+                      {/* Content */}
+                      <div className="flex min-w-0 flex-1 flex-col">
 
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-8 w-8 bg-transparent"
-                            onClick={() => updateCartItemQuantity(item.id, cartItem.quantity + 1)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                        <div className="flex items-start justify-between gap-4">
+
+                          <div className="min-w-0">
+
+                            <h4 className="font-semibold">
+                              {item.food_name}
+                            </h4>
+
+                            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                              {item.description}
+                            </p>
+
+                          </div>
+
+
+                          <span className="shrink-0 whitespace-nowrap font-semibold text-primary">
+                            {formatCurrency(item.price)}
+                          </span>
+
                         </div>
-                      ) : (
-                        <Button size="sm" onClick={() => addToCart({ ...item, quantity: 1 })}>
-                          <Plus className="h-4 w-4 mr-1" />
-                          Add
-                        </Button>
-                      )}
+
+
+                        {/* Controls */}
+                        <div className="mt-auto flex justify-end pt-2">
+
+                          {cartItem ? (
+
+                            <div className="flex items-center rounded-lg border bg-muted/30 p-0.5">
+
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7"
+                                onClick={() =>
+                                  updateCartItemQuantity(
+                                    item.id,
+                                    cartItem.quantity - 1
+                                  )
+                                }
+                                aria-label={`Decrease ${item.food_name} quantity`}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+
+
+                              <span className="w-8 text-center font-medium">
+                                {cartItem.quantity}
+                              </span>
+
+
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7"
+                                onClick={() =>
+                                  updateCartItemQuantity(
+                                    item.id,
+                                    cartItem.quantity + 1
+                                  )
+                                }
+                                aria-label={`Increase ${item.food_name} quantity`}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+
+                            </div>
+
+                          ) : (
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-8 px-3"
+                              onClick={() =>
+                                addToCart({
+                                  ...item,
+                                  quantity: 1,
+                                })
+                              }
+                            >
+                              <Plus className="mr-1.5 h-4 w-4" />
+                              Add
+                            </Button>
+
+                          )}
+
+                        </div>
+
+                      </div>
+
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })
+
+              )}
+
             </TabsContent>
           ))}
+
         </Tabs>
       </CardContent>
+
     </Card>
   )
 }

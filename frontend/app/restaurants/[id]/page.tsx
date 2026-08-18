@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
 import { format } from "date-fns"
 
@@ -9,6 +9,7 @@ import { useAppStore } from "@/lib/store"
 import { useAuth } from "@/auth/hooks/useAuth"
 import { saveRedirectUrl } from "@/auth/store/redirect.store"
 
+import { PageContainer } from "@/components/page-container"
 import { TableLayout } from "@/components/table-layout"
 import { MenuPreview } from "@/components/menu-preview"
 import Loading from "@/components/loading"
@@ -42,12 +43,12 @@ import {
 } from "@/lib/services/restaurant.service"
 
 import { createReservation } from "@/lib/services/reservation.service"
-import { getImageSrc } from "@/lib/utils"
+import { cn, getImageSrc } from "@/lib/utils"
 
 import type {
+  MenuItem,
   Restaurant,
   Table,
-  MenuItem,
 } from "@/lib/types/restaurant.types"
 
 import type {
@@ -55,14 +56,14 @@ import type {
 } from "@/lib/types/reservation.types"
 
 import {
-  Star,
+  CalendarIcon,
+  Check,
+  ChevronRight,
+  Clock,
   MapPin,
   Phone,
-  Clock,
-  CalendarIcon,
+  Star,
   Users,
-  ChevronRight,
-  Check,
   UtensilsCrossed,
 } from "lucide-react"
 
@@ -81,28 +82,38 @@ export default function RestaurantDetailPage() {
 
   const { isAuthenticated } = useAuth()
 
-  const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
-  const [tables, setTables] = useState<Table[]>([])
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
-  const [timeSlots, setTimeSlots] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
+  const [restaurant, setRestaurant] =
+    useState<Restaurant | null>(null)
 
-  // restore previous state if user returns
-  const [date, setDate] = useState<Date | undefined>(
-    currentReservationRequest?.date
-      ? new Date(currentReservationRequest.date)
-      : new Date()
-  )
+  const [tables, setTables] =
+    useState<Table[]>([])
 
-  const [time, setTime] = useState(
-    currentReservationRequest?.startTime ?? ""
-  )
+  const [menuItems, setMenuItems] =
+    useState<MenuItem[]>([])
 
-  const [partySize, setPartySize] = useState<number>(
-    currentReservationRequest?.guestNumber ?? 2
-  )
+  const [timeSlots, setTimeSlots] =
+    useState<string[]>([])
 
-  // fetch restaurant data
+  const [loading, setLoading] =
+    useState(true)
+
+  const [date, setDate] =
+    useState<Date | undefined>(
+      currentReservationRequest?.date
+        ? new Date(currentReservationRequest.date)
+        : new Date()
+    )
+
+  const [time, setTime] =
+    useState(
+      currentReservationRequest?.startTime ?? ""
+    )
+
+  const [partySize, setPartySize] =
+    useState<number>(
+      currentReservationRequest?.guestNumber ?? 2
+    )
+
   useEffect(() => {
     let isActive = true
 
@@ -110,16 +121,22 @@ export default function RestaurantDetailPage() {
       setLoading(true)
 
       try {
-        const [restaurantData, tablesData, menuData] =
-          await Promise.all([
-            getRestaurantById(id),
-            getTablesByRestaurant(id),
-            getMenuByRestaurant(id),
-          ])
+        const [
+          restaurantData,
+          tablesData,
+          menuData,
+        ] = await Promise.all([
+          getRestaurantById(id),
+          getTablesByRestaurant(id),
+          getMenuByRestaurant(id),
+        ])
 
         if (!isActive) return
 
-        setRestaurant(restaurantData?.restaurant ?? null)
+        setRestaurant(
+          restaurantData?.restaurant ?? null
+        )
+
         setTables(tablesData.tables)
         setMenuItems(menuData.items)
       } finally {
@@ -136,24 +153,30 @@ export default function RestaurantDetailPage() {
     }
   }, [id])
 
-  // fetch available reservation slots
   useEffect(() => {
     if (!date) return
 
     const fetchSlots = async () => {
-      const data = await getAvailableSlots({
-        restaurantId: id,
-        date: format(date, "yyyy-MM-dd"),
-      })
+      const data =
+        await getAvailableSlots({
+          restaurantId: id,
+          date: format(
+            date,
+            "yyyy-MM-dd"
+          ),
+        })
 
       setTimeSlots(data.slots)
 
-      // keep old selected time if still valid
       if (
         currentReservationRequest?.startTime &&
-        data.slots.includes(currentReservationRequest.startTime)
+        data.slots.includes(
+          currentReservationRequest.startTime
+        )
       ) {
-        setTime(currentReservationRequest.startTime)
+        setTime(
+          currentReservationRequest.startTime
+        )
       } else if (data.slots.length > 0) {
         setTime(data.slots[0])
       } else {
@@ -162,19 +185,33 @@ export default function RestaurantDetailPage() {
     }
 
     void fetchSlots()
-  }, [date, id, currentReservationRequest])
+  }, [
+    date,
+    id,
+    currentReservationRequest,
+  ])
 
-  const handleDateChange = (selected: Date | undefined) => {
+  const handleDateChange = (
+    selected: Date | undefined
+  ) => {
     setDate(selected)
   }
 
   const maxSeats =
     tables.length > 0
-      ? Math.max(...tables.map((t) => t.seats))
+      ? Math.max(
+          ...tables.map(
+            (table) => table.seats
+          )
+        )
       : 10
 
-  const handleTableSelect = (table: Table) => {
-    if (selectedTable?.id === table.id) {
+  const handleTableSelect = (
+    table: Table
+  ) => {
+    if (
+      selectedTable?.id === table.id
+    ) {
       setSelectedTable(null)
     } else {
       setSelectedTable(table)
@@ -183,55 +220,95 @@ export default function RestaurantDetailPage() {
 
   const buildReservationRequest =
     (): ReservationRequest | null => {
-      if (!restaurant || !selectedTable || !date || !time)
+      if (
+        !restaurant ||
+        !selectedTable ||
+        !date ||
+        !time
+      ) {
         return null
+      }
 
       return {
-        restaurantId: restaurant.id,
-        tableGroupId: selectedTable.id,
-        date: format(date, "yyyy-MM-dd"),
-        startTime: time,
-        guestNumber: partySize,
-        orders: currentReservationRequest?.orders ?? [],
+        restaurantId:
+          restaurant.id,
+
+        tableGroupId:
+          selectedTable.id,
+
+        date: format(
+          date,
+          "yyyy-MM-dd"
+        ),
+
+        startTime:
+          time,
+
+        guestNumber:
+          partySize,
+
+        orders:
+          currentReservationRequest?.orders ?? [],
+
         servingTime:
           currentReservationRequest?.servingTime,
       }
     }
 
-  // persist changes while user edits
   useEffect(() => {
-    const request = buildReservationRequest()
+    const request =
+      buildReservationRequest()
 
     if (request) {
-      setCurrentReservationRequest(request)
+      setCurrentReservationRequest(
+        request
+      )
     }
-  }, [date, time, partySize, selectedTable])
+  }, [
+    date,
+    time,
+    partySize,
+    selectedTable,
+  ])
 
-  const handleBookWithoutPreorder = async () => {
-    if (!isAuthenticated) {
-      saveRedirectUrl()
-      router.push("/login")
-      return
-    }
+  const handleBookWithoutPreorder =
+    async () => {
+      if (!isAuthenticated) {
+        saveRedirectUrl()
+        router.push("/login")
+        return
+      }
 
-    const request = buildReservationRequest()
-    if (!request) return
+      const request =
+        buildReservationRequest()
 
-    try {
-      const reservation =
-        await createReservation(request)
+      if (!request) return
 
-      setCurrentReservationResponse(reservation)
+      try {
+        const reservation =
+          await createReservation(
+            request
+          )
 
-      if (reservation.status === "Confirmed") {
-        router.push(
-          `/confirmation?reservationId=${reservation.id}`
+        setCurrentReservationResponse(
+          reservation
+        )
+
+        if (
+          reservation.status ===
+          "Confirmed"
+        ) {
+          router.push(
+            `/confirmation?reservationId=${reservation.id}`
+          )
+        }
+      } catch (error) {
+        console.error(
+          "Failed to create reservation:",
+          error
         )
       }
-    } catch (error) {
-      console.error(error)
     }
-  }
 
   const handleProceedToMenu = () => {
     if (!isAuthenticated) {
@@ -239,225 +316,419 @@ export default function RestaurantDetailPage() {
       router.push("/login")
       return
     }
-    
-    const request = buildReservationRequest()
+
+    const request =
+      buildReservationRequest()
+
     if (!request) return
 
-    setCurrentReservationRequest(request)
+    setCurrentReservationRequest(
+      request
+    )
 
-    router.push(`/restaurants/${id}/menu`)
+    router.push(
+      `/restaurants/${id}/menu`
+    )
   }
 
-  if (loading) return <Loading />
+  if (loading) {
+    return <Loading />
+  }
 
   if (!restaurant) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold mb-4">
-          Restaurant not found
-        </h1>
+      <PageContainer className="max-w-xl">
+        <div className="py-16 text-center">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Restaurant not found
+          </h1>
 
-        <Button onClick={() => router.push("/restaurants")}>
-          Browse Restaurants
-        </Button>
-      </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            The restaurant you're looking for is not available.
+          </p>
+
+          <Button
+            className="mt-6 rounded-xl"
+            onClick={() =>
+              router.push(
+                "/restaurants"
+              )
+            }
+          >
+            Browse Restaurants
+          </Button>
+        </div>
+      </PageContainer>
     )
   }
 
   return (
-    <div className="min-h-screen">
-      {/* hero */}
-      <div className="relative h-[300px] md:h-[400px]">
+    <>
+      {/* Hero */}
+      <div className="relative h-[300px] md:h-[380px]">
         <Image
           src={getImageSrc(restaurant.image)}
           alt={restaurant.name}
           fill
+          priority
           className="object-cover"
         />
 
+        {/* Soft transition into page background */}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
 
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <div className="container mx-auto space-y-3">
-            <h1 className="text-3xl md:text-4xl font-bold">
-              {restaurant.name}
-            </h1>
+        {/* Restaurant info */}
+        <div className="absolute inset-x-0 bottom-0">
+          <div className="mx-auto w-full max-w-7xl px-4 pb-3 sm:px-6 lg:px-8">
+            <div className="space-y-3">
+              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+                {restaurant.name}
+              </h1>
 
-            <div className="flex items-center gap-2 text-sm">
-              <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-              {restaurant.rating}
-            </div>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  <span className="font-medium">
+                    {restaurant.rating}
+                  </span>
+                </div>
 
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="h-4 w-4" />
-              {restaurant.address}, {restaurant.city}
-            </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  <span>
+                    {restaurant.address}, {restaurant.city}
+                  </span>
+                </div>
 
-            <div className="flex items-center gap-2 text-sm">
-              <Phone className="h-4 w-4" />
-              {restaurant.phone_number}
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  <span>
+                    {restaurant.phone_number}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    {restaurant.opening_time} - {restaurant.closing_time}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* content */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* left */}
-          <div className="lg:col-span-2 space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>About</CardTitle>
+      <PageContainer>
+
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+          {/* Left */}
+          <div className="space-y-6">
+            <Card className="rounded-2xl border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">
+                  About
+                </CardTitle>
               </CardHeader>
+
               <CardContent>
-                <p>{restaurant.description}</p>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  {restaurant.description}
+                </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Select Your Table</CardTitle>
+            <Card className="rounded-2xl border shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">
+                  Select Your Table
+                </CardTitle>
+
+                <p className="text-sm text-muted-foreground">
+                  Choose an available table for your party
+                </p>
               </CardHeader>
+
               <CardContent>
                 <TableLayout
                   tables={tables}
-                  selectedTable={selectedTable}
-                  onSelectTable={handleTableSelect}
-                  partySize={partySize}
+                  selectedTable={
+                    selectedTable
+                  }
+                  onSelectTable={
+                    handleTableSelect
+                  }
+                  partySize={
+                    partySize
+                  }
                 />
               </CardContent>
             </Card>
 
-            <MenuPreview menuItems={menuItems} />
+            <MenuPreview
+              menuItems={menuItems}
+            />
           </div>
 
+          {/* Right */}
+          <aside>
+            <Card className="sticky top-24 rounded-2xl border shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">
+                  Make a Reservation
+                </CardTitle>
 
-          {/* right */}
-          <div>
-            <Card className="sticky top-24">
-              <CardHeader>
-                <CardTitle>Make a Reservation</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Choose your party size, date and time
+                </p>
               </CardHeader>
 
-              <CardContent className="space-y-4">
-                {/* guests */}
-                <Select
-                  value={partySize.toString()}
-                  onValueChange={(v) => {
-                    const nextPartySize = Number(v)
+              <CardContent className="space-y-5">
+                {/* Party size */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Party Size
+                  </label>
 
-                    setPartySize(nextPartySize)
-
-                    // reset selected table if it no longer fits
-                    if (
-                      selectedTable &&
-                      selectedTable.seats < nextPartySize
-                    ) {
-                      setSelectedTable(null)
+                  <Select
+                    value={
+                      partySize.toString()
                     }
-                  }}
-                >
-                  <SelectTrigger>
-                    <Users className="h-4 w-4 mr-2" />
-                    <SelectValue />
-                  </SelectTrigger>
+                    onValueChange={(
+                      value
+                    ) => {
+                      const nextPartySize =
+                        Number(value)
 
-                  <SelectContent>
-                    {Array.from(
-                      { length: maxSeats },
-                      (_, i) => i + 1
-                    ).map((n) => (
-                      <SelectItem
-                        key={n}
-                        value={n.toString()}
+                      setPartySize(
+                        nextPartySize
+                      )
+
+                      if (
+                        selectedTable &&
+                        selectedTable.seats <
+                          nextPartySize
+                      ) {
+                        setSelectedTable(
+                          null
+                        )
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-11 w-full rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <SelectValue />
+                      </div>
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      {Array.from(
+                        {
+                          length:
+                            maxSeats,
+                        },
+                        (_, index) =>
+                          index + 1
+                      ).map(
+                        (number) => (
+                          <SelectItem
+                            key={
+                              number
+                            }
+                            value={
+                              number.toString()
+                            }
+                          >
+                            {number}{" "}
+                            {number === 1
+                              ? "guest"
+                              : "guests"}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Date */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Date
+                  </label>
+
+                  <Popover>
+                    <PopoverTrigger
+                      asChild
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "h-11 w-full justify-start rounded-xl px-3 font-normal",
+                          !date &&
+                            "text-muted-foreground"
+                        )}
                       >
-                        {n} guests
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                        <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
 
-                {/* date */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full">
-                      <CalendarIcon className="h-4 w-4 mr-2" />
-                      {date ? format(date, "PPP") : "Pick date"}
-                    </Button>
-                  </PopoverTrigger>
+                        {date
+                          ? format(
+                              date,
+                              "PPP"
+                            )
+                          : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
 
-                  <PopoverContent>
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={handleDateChange}
-                      disabled={(date) => {
-                        const today = new Date()
-                        today.setHours(0, 0, 0, 0)
+                    <PopoverContent
+                      className="w-auto p-0"
+                      align="start"
+                    >
+                      <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={
+                          handleDateChange
+                        }
+                        disabled={(
+                          calendarDate
+                        ) => {
+                          const today =
+                            new Date()
 
-                        return date < today
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
+                          today.setHours(
+                            0,
+                            0,
+                            0,
+                            0
+                          )
 
-                {/* time */}
-                <Select value={time} onValueChange={setTime}>
-                  <SelectTrigger>
-                    <Clock className="h-4 w-4 mr-2" />
-                    <SelectValue />
-                  </SelectTrigger>
+                          return (
+                            calendarDate <
+                            today
+                          )
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-                  <SelectContent>
-                    {timeSlots.map((slot) => (
-                      <SelectItem key={slot} value={slot}>
-                        {slot}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Time */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Time
+                  </label>
 
-                {/* selected table */}
+                  <Select
+                    value={time}
+                    onValueChange={
+                      setTime
+                    }
+                    disabled={
+                      timeSlots.length ===
+                      0
+                    }
+                  >
+                    <SelectTrigger className="h-11 w-full rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+
+                        <SelectValue
+                          placeholder={
+                            timeSlots.length > 0
+                              ? "Select time"
+                              : "No times available"
+                          }
+                        />
+                      </div>
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      {timeSlots.map(
+                        (slot) => (
+                          <SelectItem
+                            key={slot}
+                            value={slot}
+                          >
+                            {slot}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Selected table */}
                 {selectedTable && (
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Selected Table
-                    </p>
-                    <p>
-                      {selectedTable.seats} seats •{" "}
-                      {selectedTable.location}
-                    </p>
+                  <div className="rounded-xl bg-primary/5 p-3.5">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Check className="h-4 w-4 text-primary" />
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Selected Table
+                        </p>
+
+                        <p className="mt-0.5 text-sm font-semibold capitalize">
+                          { selectedTable.location } · { selectedTable.seats } seats
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                {/* actions */}
-                <div className="space-y-3">
+                {/* Actions */}
+                <div className="space-y-3 pt-1">
                   <Button
-                    className="w-full"
-                    onClick={handleBookWithoutPreorder}
-                    disabled={!date || !time || !selectedTable}
+                    type="button"
+                    size="lg"
+                    className="w-full rounded-xl"
+                    onClick={
+                      handleBookWithoutPreorder
+                    }
+                    disabled={
+                      !date ||
+                      !time ||
+                      !selectedTable
+                    }
                   >
                     Book Table
-                    <Check className="h-4 w-4 ml-2" />
+                    <Check className="ml-2 h-4 w-4" />
                   </Button>
 
                   <Button
+                    type="button"
                     variant="outline"
-                    className="w-full"
-                    onClick={handleProceedToMenu}
-                    disabled={!date || !time || !selectedTable}
+                    size="lg"
+                    className="w-full rounded-xl"
+                    onClick={
+                      handleProceedToMenu
+                    }
+                    disabled={
+                      !date ||
+                      !time ||
+                      !selectedTable
+                    }
                   >
-                    <UtensilsCrossed className="h-4 w-4 mr-2" />
+                    <UtensilsCrossed className="mr-2 h-4 w-4" />
                     Pre-order Food
-                    <ChevronRight className="h-4 w-4 ml-2" />
+                    <ChevronRight className="ml-auto h-4 w-4" />
                   </Button>
                 </div>
+
+                {!selectedTable && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Select a table to continue
+                  </p>
+                )}
               </CardContent>
             </Card>
-          </div>
+          </aside>
         </div>
-      </div>
-    </div>
+      </PageContainer>
+    </>
   )
 }

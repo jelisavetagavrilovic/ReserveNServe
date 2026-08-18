@@ -1,8 +1,12 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+
 import Loading from "@/components/loading"
 import { RestaurantCard } from "@/components/restaurant-card"
+import { PageContainer } from "@/components/page-container"
+import { PageHeader } from "@/components/page-header"
+
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,10 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, 
-  SlidersHorizontal, 
+
+import {
   ChevronLeft,
-  ChevronRight, } from "lucide-react"
+  ChevronRight,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react"
 
 import type {
   Restaurant,
@@ -23,8 +30,8 @@ import type {
 } from "@/lib/types/restaurant.types"
 
 import {
-  getRestaurants,
   getRestaurantFilters,
+  getRestaurants,
 } from "@/lib/services/restaurant.service"
 
 import { useAppStore } from "@/lib/store"
@@ -55,20 +62,29 @@ export default function RestaurantsPage() {
       setLoading(true)
       setHasSearched(true)
 
-      const response = await getRestaurants({
-        search: params?.search ?? searchQuery,
-        cuisine_type: params?.cuisine_type ?? cuisineFilter,
-        price: params?.price ?? priceFilter,
-        sortBy: params?.sortBy ?? sortBy,
-        page: params?.page ?? page,
-        pageSize: 4,
-      })
+      try {
+        const response = await getRestaurants({
+          search: params?.search ?? searchQuery,
+          cuisine_type: params?.cuisine_type ?? cuisineFilter,
+          price: params?.price ?? priceFilter,
+          sortBy: params?.sortBy ?? sortBy,
+          page: params?.page ?? page,
+          pageSize: 4,
+        })
 
-      setRestaurants(response.items)
-      setTotalPages(response.totalPages)
-      setLoading(false)
+        setRestaurants(response.items)
+        setTotalPages(response.totalPages)
+      } finally {
+        setLoading(false)
+      }
     },
-    [searchQuery, cuisineFilter, priceFilter, sortBy, page]
+    [
+      searchQuery,
+      cuisineFilter,
+      priceFilter,
+      sortBy,
+      page,
+    ]
   )
 
   useEffect(() => {
@@ -85,176 +101,262 @@ export default function RestaurantsPage() {
       setCuisines(filters.cuisines)
       setRangePrices(filters.rangePrices)
 
-      await handleSearch({ sortBy: "rating", page: 1 })
+      await handleSearch({
+        sortBy: "rating",
+        page: 1,
+      })
     }
 
     void init()
   }, [])
 
-  // pagination re-fetch
   useEffect(() => {
     if (!hasSearched) return
 
     void handleSearch()
   }, [page])
 
+  const handleApplyFilters = () => {
+    if (page !== 1) {
+      setPage(1)
+      return
+    }
+
+    void handleSearch({
+      page: 1,
+    })
+  }
+
+  const handleClearFilters = () => {
+    setSearchQuery("")
+    setCuisineFilter("all")
+    setPriceFilter("all")
+
+    if (page !== 1) {
+      setPage(1)
+
+      void handleSearch({
+        search: "",
+        cuisine_type: "all",
+        price: "all",
+        sortBy,
+        page: 1,
+      })
+
+      return
+    }
+
+    void handleSearch({
+      search: "",
+      cuisine_type: "all",
+      price: "all",
+      sortBy,
+      page: 1,
+    })
+  }
+
   return (
-    <div className="min-h-screen py-6">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="md:text-3xl font-bold mb-2">Restaurants</h1>
-          <p className="text-muted-foreground mb-6">
-            Discover and book tables at the best restaurants
-          </p>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title="Restaurants"
+        description="Discover and book tables at the best restaurants"
+      />
 
-        {/* Filters */}
-        <div className="bg-card border rounded-lg p-4 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" />
-              <Input
-                placeholder="Search restaurants..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+      {/* Filters */}
+      <div className="mb-6 rounded-2xl border bg-card p-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
-            <div className="flex flex-wrap gap-3">
-              <Select value={cuisineFilter} onValueChange={setCuisineFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Cuisine" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Cuisines</SelectItem>
-                  {cuisines.map((cuisine) => (
-                    <SelectItem key={cuisine} value={cuisine}>
-                      {cuisine}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={priceFilter} onValueChange={setPriceFilter}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Price" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Prices</SelectItem>
-                  {rangePrices.map((price) => (
-                    <SelectItem key={price} value={price}>
-                      {price}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={sortBy}
-                onValueChange={(value) =>
-                  setSortBy(value as "rating" | "name")
+            <Input
+              placeholder="Search restaurants..."
+              value={searchQuery}
+              onChange={(event) =>
+                setSearchQuery(event.target.value)
+              }
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  handleApplyFilters()
                 }
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SlidersHorizontal className="mr-2 h-4 w-4" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="rating">Top Rated</SelectItem>
-                  <SelectItem value="name">Name A-Z</SelectItem>
-                </SelectContent>
-              </Select>
+              }}
+              className="h-10 rounded-xl pl-10"
+            />
+          </div>
 
-              <Button onClick={() => handleSearch()}>
-                Apply Filters
-              </Button>
-            </div>
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3">
+            <Select
+              value={cuisineFilter}
+              onValueChange={setCuisineFilter}
+            >
+              <SelectTrigger className="w-[150px] rounded-xl">
+                <SelectValue placeholder="Cuisine" />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value="all">
+                  All Cuisines
+                </SelectItem>
+
+                {cuisines.map((cuisine) => (
+                  <SelectItem
+                    key={cuisine}
+                    value={cuisine}
+                  >
+                    {cuisine}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={priceFilter}
+              onValueChange={setPriceFilter}
+            >
+              <SelectTrigger className="w-[130px] rounded-xl">
+                <SelectValue placeholder="Price" />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value="all">
+                  All Prices
+                </SelectItem>
+
+                {rangePrices.map((price) => (
+                  <SelectItem
+                    key={price}
+                    value={price}
+                  >
+                    {price}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={sortBy}
+              onValueChange={(value) =>
+                setSortBy(
+                  value as "rating" | "name"
+                )
+              }
+            >
+              <SelectTrigger className="w-[145px] rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value="rating">
+                  Top Rated
+                </SelectItem>
+
+                <SelectItem value="name">
+                  Name A-Z
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              type="button"
+              className="rounded-xl"
+              onClick={handleApplyFilters}
+            >
+              Apply Filters
+            </Button>
           </div>
         </div>
+      </div>
 
-        {/* Loading */}
-        {loading && <Loading />}
+      {/* Loading */}
+      {loading && <Loading />}
 
-        {/* Results */}
-        {!loading && restaurants.length > 0 && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {restaurants.map((restaurant) => {
-                const restaurantWithImage = {
-                  ...restaurant,
-                  image: restaurant.image
-                    ? `data:image/jpeg;base64,${restaurant.image}`
-                    : "/placeholder.svg",
-                }
+      {/* Results */}
+      {!loading && restaurants.length > 0 && (
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {restaurants.map((restaurant) => (
+              <RestaurantCard
+                key={restaurant.id}
+                restaurant={restaurant}
+              />
+            ))}
+          </div>
 
-                return (
-                  <RestaurantCard
-                    key={restaurant.id}
-                    restaurant={restaurantWithImage}
-                  />
-                )
-              })}
-            </div>
-
-            {/* Pagination */}
-            <div className="flex justify-center items-center gap-4 mt-8">
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-4">
               <Button
+                type="button"
                 variant="outline"
                 size="icon"
+                className="rounded-xl"
                 disabled={page === 1}
-                onClick={() => setPage((prev) => prev - 1)}
+                onClick={() =>
+                  setPage(
+                    (previous) =>
+                      previous - 1
+                  )
+                }
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
 
-              <span className="text-sm font-medium">
-                {page} / {totalPages}
+              <span className="text-sm text-muted-foreground">
+                Page{" "}
+                <span className="font-medium text-foreground">
+                  {page}
+                </span>{" "}
+                of {totalPages}
               </span>
 
               <Button
+                type="button"
                 variant="outline"
                 size="icon"
+                className="rounded-xl"
                 disabled={page === totalPages}
-                onClick={() => setPage((prev) => prev + 1)}
+                onClick={() =>
+                  setPage(
+                    (previous) =>
+                      previous + 1
+                  )
+                }
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-          </>
-        )}
+          )}
+        </>
+      )}
 
-        {/* Empty state */}
-        {!loading && hasSearched && restaurants.length === 0 && (
-          <div className="text-center py-16">
-            <h3 className="text-lg font-semibold mb-2">
+      {/* Empty state */}
+      {!loading &&
+        hasSearched &&
+        restaurants.length === 0 && (
+          <div className="py-16 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+              <Search className="h-5 w-5 text-muted-foreground" />
+            </div>
+
+            <h3 className="text-lg font-semibold">
               No restaurants found
             </h3>
-            <p className="text-muted-foreground mb-4">
-              Try adjusting your filters
+
+            <p className="mt-2 text-sm text-muted-foreground">
+              Try adjusting your search or filters.
             </p>
 
             <Button
+              type="button"
               variant="outline"
-              onClick={() => {
-                setSearchQuery("")
-                setCuisineFilter("all")
-                setPriceFilter("all")
-
-                void handleSearch({
-                  search: "",
-                  cuisine_type: "all",
-                  price: "all",
-                  sortBy,
-                })
-              }}
+              className="mt-6 rounded-xl"
+              onClick={handleClearFilters}
             >
               Clear Filters
             </Button>
           </div>
         )}
-      </div>
-    </div>
+    </PageContainer>
   )
 }
