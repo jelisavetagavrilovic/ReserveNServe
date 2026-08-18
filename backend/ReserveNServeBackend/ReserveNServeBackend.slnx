@@ -1,6 +1,18 @@
 <Solution>
   <Folder Name="/Services/" />
-  <Folder Name="/Services/Restaurants/">
+    <Folder Name="/Services/Payment/">
+        <Project Path="Services/Payment/Payment.API/Payment.API.csproj" />
+    </Folder>
+    <Folder Name="/Services/Identity/">
+        <Project Path="Services/Identity/Identity.API/Identity.API.csproj" />
+    </Folder>
+    <Folder Name="/Services/Restaurants/">
         <Project Path="Services/Restaurants/Restaurants.API/Restaurants.API.csproj" />
     </Folder>
+    <Folder Name="/Services/Reservations/">
+        <Project Path="Services/Reservations/Reservations.API/Reservations.API.csproj" />
+    </Folder>
+    <Folder Name="/Solution Items/">
+    <File Path="compose.yaml" />
+  </Folder>
 </Solution>
