@@ -19,7 +19,10 @@ public static class ApplicationBuilderExtensions
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         });
 
-        app.UseHttpsRedirection();
+        if (!app.Environment.IsDevelopment())
+        {
+            app.UseHttpsRedirection();
+        }
         app.UseCors("Frontend");
         app.UseRateLimiter();
         app.UseAuthentication();

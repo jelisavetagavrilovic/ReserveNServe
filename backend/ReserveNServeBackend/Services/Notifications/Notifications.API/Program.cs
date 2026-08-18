@@ -4,6 +4,14 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options=> 
+{
+    options.AddPolicy("Frontend", policy => { policy.WithOrigins("https://localhost:####").AllowAnyHeader()
+        .AllowAnyMethod();
+        
+     });
+});
+
 builder.Services.AddNotificationsApi(builder.Configuration);
 
 var app = builder.Build();
