@@ -10,6 +10,7 @@
 *.userosscache
 *.sln.docstates
 *.env
+!.env.example
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -416,3 +417,17 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Rider IDE
+.idea/
+*.sln.iml
+out/
+*.DotSettings.user
+
+# macOS
+.DS_Store
+
+
+# Development settings anywhere in project
+**/appsettings.Development.json
+**/appsettings.Local.json

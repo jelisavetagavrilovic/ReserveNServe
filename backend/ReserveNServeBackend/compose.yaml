@@ -1,0 +1,7 @@
+﻿services:
+  reservations.api:
+    image: reservations.api
+    build:
+      context: .
+      dockerfile: Reservations.API/Dockerfile
+
