@@ -1,21 +1,25 @@
-using Identity.API.Data;
-using Identity.API.Extensions;
-using Microsoft.EntityFrameworkCore;
-
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddIdentityApi(builder.Configuration);
+// Add services to the container.
+
+builder.Services.AddControllers();
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppIdentityDbContext>();
-    await db.Database.MigrateAsync();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-await IdentitySeeder.SeedAsync(app.Services, app.Environment);
+app.UseHttpsRedirection();
 
-app.UseIdentityApi();
+app.UseAuthorization();
+
+app.MapControllers();
 
 app.Run();
