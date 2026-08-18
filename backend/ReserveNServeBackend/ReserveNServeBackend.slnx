@@ -1,5 +1,7 @@
 <Solution>
-    <Folder Name="/Services/" />
+    <Folder Name="/Services/Payment/">
+        <Project Path="Services/Payment/Payment.API/Payment.API.csproj" />
+    </Folder>
     <Folder Name="/Services/Identity/">
         <Project Path="Services/Identity/Identity.API/Identity.API.csproj" />
     </Folder>
