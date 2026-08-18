@@ -1,4 +1,5 @@
 <Solution>
+  <Folder Name="/Services/" />
   <Folder Name="/Services/Identity/">
     <Project Path="Services/Identity/Identity.API/Identity.API.csproj" />
   </Folder>
@@ -7,6 +8,9 @@
   </Folder>
   <Folder Name="/Services/Reservations/">
     <Project Path="Services/Reservations/Reservations.API/Reservations.API.csproj" />
+  </Folder>
+  <Folder Name="/Services/Payment/">
+      <Project Path="Services/Payment/Payment.API/Payment.API.csproj" />
   </Folder>
   <Folder Name="/Services/Notifications/">
     <Project Path="Services/Notifications/Notifications.API/Notifications.API.csproj" />
