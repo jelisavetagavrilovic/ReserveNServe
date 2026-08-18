@@ -1,18 +1,27 @@
 <Solution>
   <Folder Name="/Services/" />
-    <Folder Name="/Services/Payment/">
-        <Project Path="Services/Payment/Payment.API/Payment.API.csproj" />
-    </Folder>
-    <Folder Name="/Services/Identity/">
-        <Project Path="Services/Identity/Identity.API/Identity.API.csproj" />
-    </Folder>
-    <Folder Name="/Services/Restaurants/">
-        <Project Path="Services/Restaurants/Restaurants.API/Restaurants.API.csproj" />
-    </Folder>
-    <Folder Name="/Services/Reservations/">
-        <Project Path="Services/Reservations/Reservations.API/Reservations.API.csproj" />
-    </Folder>
-    <Folder Name="/Solution Items/">
+  <Folder Name="/Services/Identity/">
+    <Project Path="Services/Identity/Identity.API/Identity.API.csproj" />
+  </Folder>
+  <Folder Name="/Services/Restaurants/">
+    <Project Path="Services/Restaurants/Restaurants.API/Restaurants.API.csproj" Id="12011a1f-0bac-4526-a3e7-ae87963e6926" />
+  </Folder>
+  <Folder Name="/Services/Reservations/">
+    <Project Path="Services/Reservations/Reservations.API/Reservations.API.csproj" />
+  </Folder>
+  <Folder Name="/Services/Payment/">
+      <Project Path="Services/Payment/Payment.API/Payment.API.csproj" />
+  </Folder>
+  <Folder Name="/Services/Notifications/">
+    <Project Path="Services/Notifications/Notifications.API/Notifications.API.csproj" />
+  </Folder>
+  <Folder Name="/BuildingBlocks/">
+    <Project Path="BuildingBlocks/Contracts/Contracts.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="../../Identity.API.Tests/Identity.API.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
     <File Path="compose.yaml" />
   </Folder>
 </Solution>
