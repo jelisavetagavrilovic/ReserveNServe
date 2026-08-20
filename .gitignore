@@ -10,6 +10,7 @@
 *.userosscache
 *.sln.docstates
 *.env
+!.env.example
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -427,3 +428,7 @@ out/
 .DS_Store
 
 database/
+
+# Development settings anywhere in project
+**/appsettings.Development.json
+**/appsettings.Local.json
