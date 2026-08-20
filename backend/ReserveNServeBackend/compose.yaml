@@ -160,6 +160,26 @@
       reservations-db:
         condition: service_healthy
 
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_RESERVATIONS_API_URL: ${NEXT_PUBLIC_RESERVATIONS_API_URL:-https://localhost:7294}
+
+    container_name: reservenserve-frontend
+
+    environment:
+      NODE_ENV: production
+
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+
+    depends_on:
+      reservations-api:
+        condition: service_started
+
 volumes:
   sqlserver_data:
   rabbitmq_data:
