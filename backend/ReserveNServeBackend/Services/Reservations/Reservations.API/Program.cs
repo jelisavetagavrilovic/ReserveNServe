@@ -26,6 +26,18 @@ var connectionString =
 
 // Add services to the container.
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddAuthorization();
 
 builder.Services
@@ -35,7 +47,6 @@ builder.Services
         options.JsonSerializerOptions.Converters.Add(
             new JsonStringEnumConverter());
     });
-// builder.Services.AddControllers();
 
 builder.Services.AddDbContext<ReservationsDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -72,6 +83,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseCors("Frontend");
 app.UseAuthorization();
 app.MapControllers();  
 

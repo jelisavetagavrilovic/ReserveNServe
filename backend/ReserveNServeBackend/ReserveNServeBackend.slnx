@@ -1,5 +1,8 @@
 <Solution>
-    <Folder Name="/Services/" />
+  <Folder Name="/Services/" />
+    <Folder Name="/Services/Payment/">
+        <Project Path="Services/Payment/Payment.API/Payment.API.csproj" />
+    </Folder>
     <Folder Name="/Services/Identity/">
         <Project Path="Services/Identity/Identity.API/Identity.API.csproj" />
     </Folder>
@@ -7,7 +10,19 @@
         <Project Path="Services/Restaurants/Restaurants.API/Restaurants.API.csproj" />
     </Folder>
     <Folder Name="/Services/Reservations/">
-        <Project Path="Services/Reservations/Reservations.API/Reservations.API.csproj" />
+    	<Project Path="Services/Reservations/Reservations.API/Reservations.API.csproj" />
+    	<Project Path="Services/Reservations/Reservations.Application/Reservations.Application.csproj" />
+    	<Project Path="Services/Reservations/Reservations.Domain/Reservations.Domain.csproj" />
+    	<Project Path="Services/Reservations/Reservations.Infrastructure/Reservations.Infrastructure.csproj" />
+    </Folder>
+    <Folder Name="/Services/Notifications/">
+        <Project Path="Services/Notifications/Notifications.API/Notifications.API.csproj" />
+    </Folder>
+    <Folder Name="/BuildingBlocks/">
+        <Project Path="BuildingBlocks/Contracts/Contracts.csproj" />
+    </Folder>
+    <Folder Name="/Tests/">
+        <Project Path="Services/Identity/Tests/Identity.API.Tests/Identity.API.Tests.csproj" />
     </Folder>
     <Folder Name="/Solution Items/">
     <File Path="compose.yaml" />
