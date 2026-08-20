@@ -10,7 +10,10 @@
         <Project Path="Services/Restaurants/Restaurants.API/Restaurants.API.csproj" />
     </Folder>
     <Folder Name="/Services/Reservations/">
-        <Project Path="Services/Reservations/Reservations.API/Reservations.API.csproj" />
+    	<Project Path="Services/Reservations/Reservations.API/Reservations.API.csproj" />
+    	<Project Path="Services/Reservations/Reservations.Application/Reservations.Application.csproj" />
+    	<Project Path="Services/Reservations/Reservations.Domain/Reservations.Domain.csproj" />
+    	<Project Path="Services/Reservations/Reservations.Infrastructure/Reservations.Infrastructure.csproj" />
     </Folder>
     <Folder Name="/Services/Notifications/">
         <Project Path="Services/Notifications/Notifications.API/Notifications.API.csproj" />

@@ -15,6 +15,7 @@ export type {
   ReservationQueryRequest,
   ReservationListResponse,
   UpdateReservationOrdersRequest,
+  UpdateReservationRequest,
   StartPaymentResponse,
   OrderRequest,
   OrderResponse,
