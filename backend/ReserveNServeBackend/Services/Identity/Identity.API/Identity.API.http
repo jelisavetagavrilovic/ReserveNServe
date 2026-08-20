@@ -1,6 +1,146 @@
-@Identity.API_HostAddress = http://localhost:5206
+@Identity_API_HostAddress = http://localhost:5206
 
-GET {{Identity.API_HostAddress}}/weatherforecast/
+### ------------------------------------------------------------
+### Health / Ping (no auth)
+### ------------------------------------------------------------
+
+GET {{Identity_API_HostAddress}}/api/admin/ping
 Accept: application/json
 
 ###
+
+GET {{Identity_API_HostAddress}}/api/owners/ping
+Accept: application/json
+
+### ------------------------------------------------------------
+### Auth
+### ------------------------------------------------------------
+
+### Register
+POST {{Identity_API_HostAddress}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "test.user@example.com",
+  "password": "Password123!"
+}
+
+###
+
+### Login
+POST {{Identity_API_HostAddress}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "test.user@example.com",
+  "password": "Password123!"
+}
+
+###
+
+### After login, copy the tokens into these variables
+@accessToken = PASTE_ACCESS_TOKEN_HERE
+@refreshToken = PASTE_REFRESH_TOKEN_HERE
+
+### Current user (requires Bearer token)
+GET {{Identity_API_HostAddress}}/api/auth/me
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+
+### Refresh (uses refresh token)
+POST {{Identity_API_HostAddress}}/api/auth/refresh
+Content-Type: application/json
+Accept: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+###
+
+### Logout (revoke one refresh token)
+POST {{Identity_API_HostAddress}}/api/auth/logout
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+###
+
+### Logout from all devices (revoke all refresh tokens for the user)
+POST {{Identity_API_HostAddress}}/api/auth/logout-all
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+### ------------------------------------------------------------
+### Email confirmation / password reset (DEV flow for now)
+### ------------------------------------------------------------
+
+### Confirm Email
+POST {{Identity_API_HostAddress}}/api/auth/confirm-email
+Content-Type: application/json
+Accept: application/json
+
+{
+  "userId": "PASTE_USER_ID_HERE",
+  "token": "PASTE_CONFIRMATION_TOKEN_HERE"
+}
+
+###
+
+### Forgot Password
+POST {{Identity_API_HostAddress}}/api/auth/forgot-password
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "test.user@example.com"
+}
+
+###
+
+### Reset Password
+POST {{Identity_API_HostAddress}}/api/auth/reset-password
+Content-Type: application/json
+Accept: application/json
+
+{
+  "userId": "PASTE_USER_ID_HERE",
+  "token": "PASTE_RESET_TOKEN_HERE",
+  "newPassword": "NewPassword123!"
+}
+
+### ------------------------------------------------------------
+### Restaurant owner requests (requires auth; approval likely admin)
+### ------------------------------------------------------------
+
+### Request restaurant owner (current user)
+POST {{Identity_API_HostAddress}}/api/owners/requests
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+
+### List owner requests (likely admin-only)
+GET {{Identity_API_HostAddress}}/api/owners/requests
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+###
+
+### Approve owner request (likely admin-only)
+POST {{Identity_API_HostAddress}}/api/owners/requests/approve
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "email": "test.user@example.com"
+}
