@@ -117,15 +117,16 @@ export async function reconcilePaymentStatus(
    * The backend will already contain the
    * status received from Payment Service.
    */
-  return updateReservation(
-    reservationId,
-    {
-      paymentStatus:
-        outcome === "succeeded"
-          ? "Succeeded"
-          : "Failed",
-    }
-  )
+  // return updateReservation(
+  //   reservationId,
+  //   {
+  //     paymentStatus:
+  //       outcome === "succeeded"
+  //         ? "Succeeded"
+  //         : "Failed",
+  //   }
+  // )
+  return reservation
 }
 
 
@@ -174,28 +175,31 @@ export async function reconcileRefundStatus(
       reservationId
     )
 
-
-  if (
-    reservation.status !==
-    "Cancelled"
-  ) {
-    throw new Error(
-      "Refund can only be reconciled for a cancelled reservation"
-    )
+    return reservation
   }
 
 
-  if (
-    reservation.paymentStatus !==
-    "RefundPending"
-  ) {
-    throw new Error(
-      "Refund is not pending"
-    )
-  }
+//   if (
+//     reservation.status !==
+//     "Cancelled"
+//   ) {
+//     throw new Error(
+//       "Refund can only be reconciled for a cancelled reservation"
+//     )
+//   }
 
 
-  await delay()
+//   if (
+//     reservation.paymentStatus !==
+//     "RefundPending"
+//   ) {
+//     throw new Error(
+//       "Refund is not pending"
+//     )
+//   }
+
+
+//   await delay()
 
 
   /*
@@ -204,13 +208,14 @@ export async function reconcileRefundStatus(
    * In production the Reservations Service
    * will already contain this state.
    */
-  return updateReservation(
-    reservationId,
-    {
-      paymentStatus:
-        outcome === "succeeded"
-          ? "Refunded"
-          : "RefundFailed",
-    }
-  )
-}
+  // return updateReservation(
+  //   reservationId,
+  //   {
+  //     reservationStatus:
+  //       outcome === "succeeded"
+  //         ? "Refunded"
+  //         : "RefundFailed",
+  //   }
+  // )
+  // return reservation
+// }
