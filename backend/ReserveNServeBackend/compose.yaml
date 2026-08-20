@@ -1,7 +1,166 @@
 ﻿services:
-  reservations.api:
-    image: reservations.api
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: reservenserve-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    ports:
+      - "1436:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '${MSSQL_SA_PASSWORD}' -C -Q 'SELECT 1' || exit 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: reservenserve-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: reservenserve-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  identity-api:
     build:
       context: .
+      dockerfile: Services/Identity/Identity.API/Dockerfile
+    container_name: reservenserve-identity
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+
+      ConnectionStrings__IdentityDb: "Server=sqlserver,1433;Database=ReserveNServe.Identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: guest
+      RabbitMq__Password: guest
+
+    ports:
+      - "5206:8080"
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  notifications-api:
+    build:
+      context: .
+      dockerfile: Services/Notifications/Notifications.API/Dockerfile
+    container_name: reservenserve-notifications
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+
+      ConnectionStrings__NotificationsDb: "Server=sqlserver,1433;Database=ReserveNServe.Notifications;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: guest
+      RabbitMq__Password: guest
+
+      Smtp__Host: mailpit
+      Smtp__Port: 1025
+      Smtp__UseSsl: "false"
+      Smtp__User: ""
+      Smtp__Password: ""
+      Smtp__FromName: "ReserveNServe"
+      Smtp__FromAddress: "no-reply@reservenserve.local"
+
+      FrontendBaseUrl: "http://localhost:3000"
+
+    ports:
+      - "5200:8080"
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+
+  reservations-db:
+    image: postgres:${POSTGRES_VERSION:-17}
+    container_name: reservenserve-reservations-db
+
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ReservationsDb}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+
+    volumes:
+      - reservations_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-ReservationsDb}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  reservations-api:
+    build:
+      context: ./Services/Reservations
       dockerfile: Reservations.API/Dockerfile
 
+    container_name: reservenserve-reservations
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: "http://+:8080;https://+:8081"
+
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/reservenserve.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${ASPNETCORE_HTTPS_CERTIFICATE_PASSWORD}
+
+      DB_HOST: reservations-db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-ReservationsDb}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+    ports:
+      - "${RESERVATIONS_HTTP_PORT:-5040}:8080"
+      - "${RESERVATIONS_HTTPS_PORT:-7294}:8081"
+
+    volumes:
+      - ${HOME}/.aspnet/https:/https:ro
+
+    depends_on:
+      reservations-db:
+        condition: service_healthy
+
+volumes:
+  sqlserver_data:
+  rabbitmq_data:
+  reservations_data:

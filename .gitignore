@@ -427,6 +427,7 @@ out/
 # macOS
 .DS_Store
 
+database/
 
 # Development settings anywhere in project
 **/appsettings.Development.json
