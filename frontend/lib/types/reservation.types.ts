@@ -39,6 +39,14 @@ export type UpdateReservationOrdersRequest = {
   servingTime?: string
 }
 
+export type UpdateReservationRequest = {
+  tableGroupId: number
+  date: string
+  startTime: string
+  guestNumber: number
+  servingTime?: string | null
+}
+
 export type ReservationQueryRequest = {
   page?: number
   pageSize?: number
