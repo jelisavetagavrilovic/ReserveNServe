@@ -93,6 +93,7 @@ import { User } from "../types/auth.types"
 export type AuthSnapshot = {
   accessToken: string | null
   refreshToken: string | null
+  expiresAtUtc: string | null
   user: User | null
 }
 
@@ -102,6 +103,7 @@ class AuthStore {
   private state: AuthSnapshot = {
     accessToken: null,
     refreshToken: null,
+    expiresAtUtc: null,
     user: null,
   }
 
