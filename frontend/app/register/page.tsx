@@ -97,14 +97,14 @@ export default function RegisterPage() {
 
     try {
       await authService.register({
-        name: formData.name,
+        fullName: formData.name,
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
       })
 
       router.push(
-        "/restaurants"
+        "/login"
       )
     } catch (error) {
       console.error(

@@ -163,6 +163,14 @@ export default function LoginPage() {
                   />
                 </div>
               </div>
+              <div className="flex justify-center">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
             </CardContent>
 
             <CardFooter className="flex flex-col gap-3 pt-2">

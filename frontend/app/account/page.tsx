@@ -72,6 +72,12 @@ export default function AccountPage() {
       phone: "",
     })
 
+  const [isOwnerRequestLoading, setIsOwnerRequestLoading] =
+    useState(false)
+
+  const [ownerRequestMessage, setOwnerRequestMessage] =
+    useState<string | null>(null)
+
   useEffect(() => {
     setIsHydrated(true)
   }, [])
@@ -87,7 +93,7 @@ export default function AccountPage() {
     if (!user) return
 
     const data = {
-      name: user.name,
+      name: user.fullName,
       email: user.email,
       phone: user.phone ?? "",
     }
@@ -135,7 +141,7 @@ export default function AccountPage() {
 
     try {
       await authService.updateUser({
-        name: profileData.name,
+        fullName: profileData.name,
         email: profileData.email,
         phone: profileData.phone,
       })
@@ -150,6 +156,26 @@ export default function AccountPage() {
       )
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleOwnerRequest = async () => {
+    setIsOwnerRequestLoading(true)
+    setOwnerRequestMessage(null)
+
+    try {
+      const response =
+        await authService.requestRestaurantOwner()
+
+      setOwnerRequestMessage(response.message)
+    } catch (error) {
+      setOwnerRequestMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to submit owner request."
+      )
+    } finally {
+      setIsOwnerRequestLoading(false)
     }
   }
 
@@ -311,6 +337,58 @@ export default function AccountPage() {
                 </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+        {/* ============================================================================
+    DODATO NOVO - RESTAURANT OWNER
+============================================================================ */}
+
+        <Card className="mt-6 overflow-hidden rounded-2xl border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Restaurant Owner
+            </CardTitle>
+
+            <p className="text-xs text-muted-foreground">
+              Request access to manage restaurants on Reserve&Serve.
+            </p>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {user.roles.includes("RestaurantOwner") ? (
+              <p className="text-sm text-muted-foreground">
+                Your account already has Restaurant Owner access.
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Submit a request to become a Restaurant Owner.
+                  An administrator will review your request.
+                </p>
+
+                <Button
+                  type="button"
+                  className="rounded-xl"
+                  disabled={isOwnerRequestLoading}
+                  onClick={handleOwnerRequest}
+                >
+                  {isOwnerRequestLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending Request...
+                    </>
+                  ) : (
+                    "Become a Restaurant Owner"
+                  )}
+                </Button>
+              </>
+            )}
+
+            {ownerRequestMessage && (
+              <p className="text-sm text-muted-foreground">
+                {ownerRequestMessage}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

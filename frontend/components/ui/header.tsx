@@ -66,7 +66,7 @@ export function Header() {
                   >
                     <User className="h-4 w-4" />
                     <span className="max-w-32 truncate">
-                      {user?.name ?? "Guest"}
+                      {user?.fullName ?? "Guest"}
                     </span>
                   </Button>
                 </DropdownMenuTrigger>

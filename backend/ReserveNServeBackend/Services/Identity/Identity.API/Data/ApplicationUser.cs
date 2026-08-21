@@ -6,6 +6,7 @@ namespace Identity.API.Data;
 
 public class ApplicationUser : IdentityUser
 {
+    public string FullName { get; set; } = default!;
     public List<RefreshToken> RefreshTokens { get; set; } = new();
 
     // Restaurant owner request tracking
