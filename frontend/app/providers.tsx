@@ -1,25 +1,8 @@
-// "use client"
-
-// import { useEffect } from "react"
-// import { authStore } from "@/auth/store/auth.store"
-
-// export function Providers({
-//   children,
-// }: {
-//   children: React.ReactNode
-// }) {
-//   useEffect(() => {
-//     authStore.hydrateFromStorage()
-//   }, [])
-
-//   return <>{children}</>
-// }
-
 "use client"
 
 import { useEffect } from "react"
 import { authService } from "@/auth/services/auth.service"
-import { authStore } from "@/auth/store/auth.store"
+import { authStore, AuthSnapshot } from "@/auth/store/auth.store"
 
 import { Elements } from "@stripe/react-stripe-js"
 import { loadStripe } from "@stripe/stripe-js"

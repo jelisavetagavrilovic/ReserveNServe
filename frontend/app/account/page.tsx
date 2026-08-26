@@ -36,6 +36,7 @@ import {
   RotateCcw,
   Save,
   User,
+  Store,
 } from "lucide-react"
 
 interface ProfileData {
@@ -339,58 +340,63 @@ export default function AccountPage() {
             </form>
           </CardContent>
         </Card>
-        {/* ============================================================================
-    DODATO NOVO - RESTAURANT OWNER
-============================================================================ */}
+        
+        <Card className="mt-4 rounded-2xl bg-muted/10 shadow-none">
+          <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <Store className="h-4 w-4 text-primary" />
+              </div>
 
-        <Card className="mt-6 overflow-hidden rounded-2xl border shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">
-              Restaurant Owner
-            </CardTitle>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">
+                    Restaurant Management
+                  </p>
 
-            <p className="text-xs text-muted-foreground">
-              Request access to manage restaurants on Reserve&Serve.
-            </p>
-          </CardHeader>
+                  {user.roles.includes("RestaurantOwner") && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                      Owner
+                    </span>
+                  )}
+                </div>
 
-          <CardContent className="space-y-4">
-            {user.roles.includes("RestaurantOwner") ? (
-              <p className="text-sm text-muted-foreground">
-                Your account already has Restaurant Owner access.
-              </p>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  Submit a request to become a Restaurant Owner.
-                  An administrator will review your request.
+                <p className="text-xs text-muted-foreground">
+                  {user.roles.includes("RestaurantOwner")
+                    ? "You have access to restaurant management features."
+                    : "Request access if you manage a restaurant on Reserve&Serve."}
                 </p>
 
-                <Button
-                  type="button"
-                  className="rounded-xl"
-                  disabled={isOwnerRequestLoading}
-                  onClick={handleOwnerRequest}
-                >
-                  {isOwnerRequestLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending Request...
-                    </>
-                  ) : (
-                    "Become a Restaurant Owner"
-                  )}
-                </Button>
-              </>
-            )}
+                {ownerRequestMessage && (
+                  <p className="pt-1 text-xs text-muted-foreground">
+                    {ownerRequestMessage}
+                  </p>
+                )}
+              </div>
+            </div>
 
-            {ownerRequestMessage && (
-              <p className="text-sm text-muted-foreground">
-                {ownerRequestMessage}
-              </p>
+            {!user.roles.includes("RestaurantOwner") && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 rounded-xl"
+                disabled={isOwnerRequestLoading}
+                onClick={handleOwnerRequest}
+              >
+                {isOwnerRequestLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  "Request Access"
+                )}
+              </Button>
             )}
           </CardContent>
         </Card>
+
       </div>
     </PageContainer>
   )
