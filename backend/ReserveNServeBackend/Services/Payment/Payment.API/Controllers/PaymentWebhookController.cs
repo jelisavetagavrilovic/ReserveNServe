@@ -11,10 +11,10 @@ namespace Payment.API.Controllers
     {
         private PaymentsHandler _paymentHandler;
         private readonly string _webhookSecret;
-        public PaymentWebhookController(PaymentsHandler paymentHandler, IConfiguration configuration)
+        public PaymentWebhookController(PaymentsHandler paymentHandler)
         {
             _paymentHandler = paymentHandler;
-            _webhookSecret = configuration["Stripe:WebhookSecret"];
+            _webhookSecret = Environment.GetEnvironmentVariable("PAYMENT_STRIPE_WEBHOOK_SECRET");
         }
 
         [HttpPost]
