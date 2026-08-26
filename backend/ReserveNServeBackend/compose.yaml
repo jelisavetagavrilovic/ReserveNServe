@@ -20,7 +20,170 @@
       retries: 10
       start_period: 20s
 
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: reservenserve-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: reservenserve-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  identity-api:
+    build:
+      context: .
+      dockerfile: Services/Identity/Identity.API/Dockerfile
+    container_name: reservenserve-identity
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+
+      ConnectionStrings__IdentityDb: "Server=sqlserver,1433;Database=ReserveNServe.Identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: guest
+      RabbitMq__Password: guest
+
+    ports:
+      - "5206:8080"
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  notifications-api:
+    build:
+      context: .
+      dockerfile: Services/Notifications/Notifications.API/Dockerfile
+    container_name: reservenserve-notifications
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+
+      ConnectionStrings__NotificationsDb: "Server=sqlserver,1433;Database=ReserveNServe.Notifications;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: guest
+      RabbitMq__Password: guest
+
+      Smtp__Host: mailpit
+      Smtp__Port: 1025
+      Smtp__UseSsl: "false"
+      Smtp__User: ""
+      Smtp__Password: ""
+      Smtp__FromName: "ReserveNServe"
+      Smtp__FromAddress: "no-reply@reservenserve.local"
+
+      FrontendBaseUrl: "http://localhost:3000"
+
+    ports:
+      - "5200:8080"
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+  
+  restaurants-api:
+    build:
+      context: ./Services/Restaurants/Restaurants.API
+      dockerfile: Dockerfile
+
+    container_name: reservenserve-restaurants
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: "http://+:8080;https://+:8081"
+
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/reservenserve.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${ASPNETCORE_HTTPS_CERTIFICATE_PASSWORD}
+
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=${RESTAURANTS_DB_NAME:-Restaurant};User Id=${RESTAURANTS_DB_USER:-restaurants_app};Password=${RESTAURANTS_DB_PASSWORD};TrustServerCertificate=True"
+
+    ports:
+      - "${RESTAURANTS_HTTP_PORT:-5174}:8080"
+      - "${RESTAURANTS_HTTPS_PORT:-7274}:8081"
+
+    volumes:
+      - ${USERPROFILE}/.aspnet/https:/https:ro
+
+    depends_on:
+      restaurants-db-init:
+        condition: service_completed_successfully
+
+  restaurants-db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: reservenserve-restaurants-db-init
+
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      RESTAURANTS_DB_NAME: ${RESTAURANTS_DB_NAME:-Restaurant}
+      RESTAURANTS_DB_USER: ${RESTAURANTS_DB_USER:-restaurants_app}
+      RESTAURANTS_DB_PASSWORD: ${RESTAURANTS_DB_PASSWORD:?RESTAURANTS_DB_PASSWORD is required}
+
+    volumes:
+      - ./Services/Restaurants/Restaurants.API/Database/init.sql:/scripts/init.sql:ro
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+    entrypoint: ["/bin/bash", "-c"]
+
+    command:
+      - |
+        DB_EXISTS=$$(/opt/mssql-tools18/bin/sqlcmd \
+          -S sqlserver \
+          -U sa \
+          -P "$$MSSQL_SA_PASSWORD" \
+          -C \
+          -h -1 \
+          -W \
+          -Q "SET NOCOUNT ON; SELECT CASE WHEN DB_ID('$${RESTAURANTS_DB_NAME}') IS NULL THEN 0 ELSE 1 END;" \
+          | tr -d '[:space:]')
+
+        if [ "$$DB_EXISTS" = "0" ]; then
+          echo "Database '$$RESTAURANTS_DB_NAME' does not exist. Initializing..."
+
+          /opt/mssql-tools18/bin/sqlcmd \
+            -S sqlserver \
+            -U sa \
+            -P "$$MSSQL_SA_PASSWORD" \
+            -C \
+            -i /scripts/init.sql \
+            -v \
+              DB_NAME="$$RESTAURANTS_DB_NAME" \
+              DB_USER="$$RESTAURANTS_DB_USER" \
+              DB_PASSWORD="$$RESTAURANTS_DB_PASSWORD"
+
+          echo "Restaurant database initialized successfully."
+        else
+          echo "Database '$$RESTAURANTS_DB_NAME' already exists. Skipping initialization."
+        fi
+
+    restart: "no"
+    
   payment-api:
     build:
       context: ./Services/Payment/Payment.API
@@ -103,6 +266,81 @@
 
     restart: "no"
 
+  reservations-db:
+    image: postgres:${POSTGRES_VERSION:-17}
+    container_name: reservenserve-reservations-db
+
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ReservationsDb}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+
+    volumes:
+      - reservations_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-ReservationsDb}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  reservations-api:
+    build:
+      context: ./Services/Reservations
+      dockerfile: Reservations.API/Dockerfile
+
+    container_name: reservenserve-reservations
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: "http://+:8080;https://+:8081"
+
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/reservenserve.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${ASPNETCORE_HTTPS_CERTIFICATE_PASSWORD}
+
+      DB_HOST: reservations-db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-ReservationsDb}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+    ports:
+      - "${RESERVATIONS_HTTP_PORT:-5040}:8080"
+      - "${RESERVATIONS_HTTPS_PORT:-7294}:8081"
+
+    volumes:
+      - ${HOME}/.aspnet/https:/https:ro
+
+    depends_on:
+      reservations-db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_RESERVATIONS_API_URL: ${NEXT_PUBLIC_RESERVATIONS_API_URL:-https://localhost:7294}
+
+    container_name: reservenserve-frontend
+
+    environment:
+      NODE_ENV: production
+
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+
+    depends_on:
+      reservations-api:
+        condition: service_started
+
 volumes:
   sqlserver_data:
-
+  rabbitmq_data:
+  reservations_data:

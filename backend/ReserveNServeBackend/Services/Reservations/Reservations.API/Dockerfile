@@ -8,6 +8,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Reservations.API/Reservations.API.csproj", "Reservations.API/"]
+COPY ["Reservations.Application/Reservations.Application.csproj", "Reservations.Application/"]
+COPY ["Reservations.Domain/Reservations.Domain.csproj", "Reservations.Domain/"]
+COPY ["Reservations.Infrastructure/Reservations.Infrastructure.csproj", "Reservations.Infrastructure/"]
 RUN dotnet restore "Reservations.API/Reservations.API.csproj"
 COPY . .
 WORKDIR "/src/Reservations.API"
