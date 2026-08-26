@@ -23,15 +23,6 @@ if (!IDENTITY_API_URL) {
   )
 }
 
-
-const mockUser: User = {
-  id: "user-1",
-  fullName: "john.doe@email.com",
-  name: "John Doe",
-  phone: "+1 (555) 123-4567",
-  roles: ["User"]
-}
-
 export async function loginUser(
   data: LoginRequest
 ): Promise<AuthResponse> {

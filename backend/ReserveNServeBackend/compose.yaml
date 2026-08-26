@@ -336,10 +336,6 @@
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
 
-    depends_on:
-      reservations-api:
-        condition: service_started
-
 volumes:
   sqlserver_data:
   rabbitmq_data:
