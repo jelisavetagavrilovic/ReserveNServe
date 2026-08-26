@@ -34,9 +34,12 @@ namespace Payment.API.Controllers
             Entities.Payment existingPayment = await _paymentHandler.GetPaymentByReservationIdAsync(request.ReservationId);
             if(existingPayment != null)
             {
+                var service = new PaymentIntentService();
+                var paymentIntent = await service.GetAsync(existingPayment.payment_intent);
+
                 return Ok(new
                 {
-                    clientSecret = existingPayment.payment_intent,
+                    clientSecret = paymentIntent.ClientSecret,
                     status = existingPayment.status
                 });
             }

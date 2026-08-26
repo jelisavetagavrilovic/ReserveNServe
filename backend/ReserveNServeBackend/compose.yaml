@@ -184,6 +184,89 @@
 
     restart: "no"
 
+    
+  payment-api:
+    build:
+      context: ./Services/Payment/Payment.API
+      dockerfile: Dockerfile
+
+    container_name: reservenserve-payment
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${PAYMENT_ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: "http://+:8080;https://+:8081"
+
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/reservenserve.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${PAYMENT_ASPNETCORE_HTTPS_CERTIFICATE_PASSWORD}
+
+      PAYMENT_STRIPE_SECRET_KEY: ${PAYMENT_STRIPE_SECRET_KEY}
+      PAYMENT_STRIPE_WEBHOOK_SECRET: ${PAYMENT_STRIPE_WEBHOOK_SECRET}
+
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=${PAYMENT_DB_NAME:-Restaurant};User Id=${PAYMENT_DB_USER:-payment_app};Password=${PAYMENT_DB_PASSWORD};TrustServerCertificate=True"
+
+    ports:
+      - "${PAYMENT_HTTP_PORT:-5174}:8080"
+      - "${PAYMENT_HTTPS_PORT:-7274}:8081"
+
+    volumes:
+      - ${USERPROFILE}/.aspnet/https:/https:ro
+
+    depends_on:
+      payment-db-init:
+        condition: service_completed_successfully
+
+  payment-db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: reservenserve-payment-db-init
+
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      PAYMENT_DB_NAME: ${PAYMENT_DB_NAME:-Restaurant}
+      PAYMENT_DB_USER: ${PAYMENT_DB_USER:-payment_app}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:?PAYMENT_DB_PASSWORD is required}
+
+    volumes:
+      - ./Services/Payment/Payment.API/Database/init.sql:/scripts/init.sql:ro
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+    entrypoint: ["/bin/bash", "-c"]
+
+    command:
+      - |
+        DB_EXISTS=$$(/opt/mssql-tools18/bin/sqlcmd \
+          -S sqlserver \
+          -U sa \
+          -P "$$MSSQL_SA_PASSWORD" \
+          -C \
+          -h -1 \
+          -W \
+          -Q "SET NOCOUNT ON; SELECT CASE WHEN DB_ID('$${PAYMENT_DB_NAME}') IS NULL THEN 0 ELSE 1 END;" \
+          | tr -d '[:space:]')
+
+        if [ "$$DB_EXISTS" = "0" ]; then
+          echo "Database '$$PAYMENT_DB_NAME' does not exist. Initializing..."
+
+          /opt/mssql-tools18/bin/sqlcmd \
+            -S sqlserver \
+            -U sa \
+            -P "$$MSSQL_SA_PASSWORD" \
+            -C \
+            -i /scripts/init.sql \
+            -v \
+              DB_NAME="$$PAYMENT_DB_NAME" \
+              DB_USER="$$PAYMENT_DB_USER" \
+              DB_PASSWORD="$$PAYMENT_DB_PASSWORD"
+
+          echo "Restaurant database initialized successfully."
+        else
+          echo "Database '$$PAYMENT_DB_NAME' already exists. Skipping initialization."
+        fi
+
+    restart: "no"
+
   reservations-db:
     image: postgres:${POSTGRES_VERSION:-17}
     container_name: reservenserve-reservations-db
@@ -253,10 +336,6 @@
 
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
-
-    depends_on:
-      reservations-api:
-        condition: service_started
 
 volumes:
   sqlserver_data:

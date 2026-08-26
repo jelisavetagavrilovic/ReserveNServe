@@ -36,6 +36,7 @@ import {
   RotateCcw,
   Save,
   User,
+  Store,
 } from "lucide-react"
 
 interface ProfileData {
@@ -72,6 +73,12 @@ export default function AccountPage() {
       phone: "",
     })
 
+  const [isOwnerRequestLoading, setIsOwnerRequestLoading] =
+    useState(false)
+
+  const [ownerRequestMessage, setOwnerRequestMessage] =
+    useState<string | null>(null)
+
   useEffect(() => {
     setIsHydrated(true)
   }, [])
@@ -87,7 +94,7 @@ export default function AccountPage() {
     if (!user) return
 
     const data = {
-      name: user.name,
+      name: user.fullName,
       email: user.email,
       phone: user.phone ?? "",
     }
@@ -135,7 +142,7 @@ export default function AccountPage() {
 
     try {
       await authService.updateUser({
-        name: profileData.name,
+        fullName: profileData.name,
         email: profileData.email,
         phone: profileData.phone,
       })
@@ -150,6 +157,26 @@ export default function AccountPage() {
       )
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleOwnerRequest = async () => {
+    setIsOwnerRequestLoading(true)
+    setOwnerRequestMessage(null)
+
+    try {
+      const response =
+        await authService.requestRestaurantOwner()
+
+      setOwnerRequestMessage(response.message)
+    } catch (error) {
+      setOwnerRequestMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to submit owner request."
+      )
+    } finally {
+      setIsOwnerRequestLoading(false)
     }
   }
 
@@ -313,6 +340,63 @@ export default function AccountPage() {
             </form>
           </CardContent>
         </Card>
+        
+        <Card className="mt-4 rounded-2xl bg-muted/10 shadow-none">
+          <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <Store className="h-4 w-4 text-primary" />
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">
+                    Restaurant Management
+                  </p>
+
+                  {user.roles.includes("RestaurantOwner") && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                      Owner
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  {user.roles.includes("RestaurantOwner")
+                    ? "You have access to restaurant management features."
+                    : "Request access if you manage a restaurant on Reserve&Serve."}
+                </p>
+
+                {ownerRequestMessage && (
+                  <p className="pt-1 text-xs text-muted-foreground">
+                    {ownerRequestMessage}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {!user.roles.includes("RestaurantOwner") && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 rounded-xl"
+                disabled={isOwnerRequestLoading}
+                onClick={handleOwnerRequest}
+              >
+                {isOwnerRequestLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  "Request Access"
+                )}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
       </div>
     </PageContainer>
   )

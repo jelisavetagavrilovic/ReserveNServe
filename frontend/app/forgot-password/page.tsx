@@ -2,22 +2,16 @@
 
 import { type FormEvent, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 
 import {
   AlertCircle,
+  CheckCircle2,
   Loader2,
-  Lock,
-  LogIn,
   Mail,
+  Send,
 } from "lucide-react"
 
 import { authService } from "@/auth/services/auth.service"
-import {
-  clearRedirectUrl,
-  getRedirectUrl,
-} from "@/auth/store/redirect.store"
-
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -30,37 +24,32 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 
-export default function LoginPage() {
-  const router = useRouter()
-
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    setIsLoading(true)
     setError("")
+    setSuccess("")
+    setIsLoading(true)
 
     try {
-      await authService.login({
+      const response = await authService.forgotPassword({
         email,
-        password,
       })
 
-      const redirect = getRedirectUrl()
-
-      clearRedirectUrl()
-      router.push(redirect || "/")
+      setSuccess(response.message)
     } catch (error) {
-      console.error("Login failed:", error)
+      console.error("Forgot password failed:", error)
 
       setError(
         error instanceof Error
           ? error.message
-          : "Unable to sign in."
+          : "Unable to request a password reset."
       )
     } finally {
       setIsLoading(false)
@@ -74,11 +63,11 @@ export default function LoginPage() {
           <CardHeader className="items-center space-y-3 pb-4 text-center">
             <div className="space-y-1">
               <CardTitle className="text-2xl font-bold tracking-tight">
-                Welcome Back
+                Forgot Password
               </CardTitle>
 
               <p className="text-sm text-muted-foreground">
-                Sign in to continue with your reservations
+                Enter your email to receive a reset link
               </p>
             </div>
           </CardHeader>
@@ -91,6 +80,16 @@ export default function LoginPage() {
 
                   <p className="text-sm text-destructive">
                     {error}
+                  </p>
+                </div>
+              )}
+
+              {success && (
+                <div className="flex items-center gap-2 rounded-lg border border-green-600/20 bg-green-50 px-3 py-2.5">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+
+                  <p className="text-sm text-green-700">
+                    {success}
                   </p>
                 </div>
               )}
@@ -115,42 +114,9 @@ export default function LoginPage() {
                       if (error) {
                         setError("")
                       }
-                    }}
-                    disabled={isLoading}
-                    required
-                    className="h-10 rounded-xl pl-10"
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">
-                    Password
-                  </Label>
-
-                  <Link
-                    href="/forgot-password"
-                    className="text-xs font-medium text-primary hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(event) => {
-                      setPassword(event.target.value)
-
-                      if (error) {
-                        setError("")
+                      if (success) {
+                        setSuccess("")
                       }
                     }}
                     disabled={isLoading}
@@ -170,25 +136,22 @@ export default function LoginPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
+                    Sending...
                   </>
                 ) : (
                   <>
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Sign In
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Reset Link
                   </>
                 )}
               </Button>
 
-              <p className="text-center text-sm text-muted-foreground">
-                Don&apos;t have an account?{" "}
-                <Link
-                  href="/register"
-                  className="font-medium text-primary hover:underline"
-                >
-                  Create one
-                </Link>
-              </p>
+              <Link
+                href="/login"
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Back to Sign In
+              </Link>
             </CardFooter>
           </form>
         </Card>

@@ -6,7 +6,7 @@ using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 
-StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
+StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable("PAYMENT_STRIPE_SECRET_KEY");
 
 // Add services to the container.
 

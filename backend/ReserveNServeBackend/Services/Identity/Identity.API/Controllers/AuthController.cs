@@ -58,9 +58,24 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpGet("me")]
-    public IActionResult Me()
+    public async Task<IActionResult> Me()
     {
-        return ToActionResult(_authService.Me(User));
+        var result = await _authService.MeAsync(User);
+        return ToActionResult(result);
+    }
+
+    [Authorize]
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateProfile(
+    UpdateProfileRequest request)
+    {
+        var result =
+            await _authService.UpdateProfileAsync(
+                User,
+                request
+            );
+
+        return ToActionResult(result);
     }
 
     [Authorize]
