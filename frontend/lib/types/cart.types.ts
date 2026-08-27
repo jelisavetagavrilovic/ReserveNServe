@@ -1,6 +1,6 @@
 export type CartItem = {
   id: number
-  food_name: string
+  foodName: string
   price: number
   quantity: number
   image?: string

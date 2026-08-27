@@ -21,14 +21,14 @@ namespace Restaurants.API.Controllers
         }
 
         [HttpGet("GetRestaurants")]
-        public async Task<ActionResult<IEnumerable<RestaurantDTO>>> GetRestaurantsAsync(GetRestaurantsRequest request)
+        public async Task<ActionResult<GetRestaurantsResponse>> GetRestaurantsAsync(
+            [FromQuery] GetRestaurantsRequest request
+        )
         {
-            var getRestaurantsDTOs = await _restaurantsHandler.GetRestaurantsAsync(request);
-            if(getRestaurantsDTOs == null)
-            {
-                return NotFound();
-            }
-            return Ok(getRestaurantsDTOs);
+            var response =
+                await _restaurantsHandler.GetRestaurantsAsync(request);
+
+            return Ok(response);
         }
 
         [HttpGet("GetRestaurants/{id}")]
@@ -88,13 +88,17 @@ namespace Restaurants.API.Controllers
         }
 
         [HttpGet("GetRestaurantsFilters")]
-        public async Task<ActionResult<IEnumerable<GetRestaurantsFiltersResponse>>> GetRestaurantsFilters()
+        public async Task<ActionResult<GetRestaurantsFiltersResponse>>
+            GetRestaurantsFilters()
         {
-            var filters = await _restaurantsHandler.GetRestaurantsFiltersAsync();
+            var filters =
+                await _restaurantsHandler.GetRestaurantsFiltersAsync();
+
             if (filters == null)
             {
                 return NotFound();
             }
+
             return Ok(filters);
         }
     }

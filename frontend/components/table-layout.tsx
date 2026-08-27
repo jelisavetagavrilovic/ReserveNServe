@@ -23,7 +23,7 @@ export function TableLayout({
   partySize,
 }: TableLayoutProps) {
   const getTableStatus = (table: Table) => {
-    if (table.available_number === 0) return "unavailable"
+    if (table.availableNumber === 0) return "unavailable"
     if (table.seats < partySize) return "too-small"
     if (selectedTable?.id === table.id) return "selected"
     return "available"
@@ -104,9 +104,9 @@ export function TableLayout({
                 >
                   {status === "too-small"
                     ? "Too small"
-                    : table.available_number === 0
+                    : table.availableNumber === 0
                       ? "Reserved"
-                      : `${table.available_number} available`}
+                      : `${table.availableNumber} available`}
                 </span>
 
                 {status === "selected" ? (

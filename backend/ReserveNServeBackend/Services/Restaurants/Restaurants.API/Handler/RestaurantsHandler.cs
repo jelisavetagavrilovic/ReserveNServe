@@ -12,87 +12,132 @@ namespace Restaurants.API.Handler
     {
         private IRestaurantsRepository _restaurantsRepository = restaurantsRepository;
 
-        internal async Task<IEnumerable<RestaurantDTO?>> GetRestaurantsAsync(GetRestaurantsRequest request)
+        internal async Task<GetRestaurantsResponse>
+            GetRestaurantsAsync(GetRestaurantsRequest request)
         {
-            IEnumerable<RestaurantDTO> getRestaurantsDTOs = new List<RestaurantDTO>();
+            IEnumerable<RestaurantDTO> restaurantDTOs = [];
+
             try
             {
-                var restaurants = await _restaurantsRepository.GetRestaurantsAsync(request);
-                foreach (var restaurant in restaurants)
+                var result =
+                    await _restaurantsRepository.GetRestaurantsAsync(request);
+
+                foreach (var restaurant in result.Items)
                 {
                     try
                     {
-                        var cuisine_type = await GetCuisineTypeName(restaurant.cuisine_type);
+                        var cuisineType =
+                            await GetCuisineTypeName(
+                                restaurant.cuisine_type
+                            );
 
-                        RestaurantDTO getRestaurantDTO = new RestaurantDTO();
-                        getRestaurantDTO.id = restaurant.id;
-                        getRestaurantDTO.name = restaurant.name;
-                        getRestaurantDTO.description = restaurant.description;
-                        getRestaurantDTO.city = restaurant.city;
-                        getRestaurantDTO.address = restaurant.address;
-                        getRestaurantDTO.phone_number = restaurant.phone_number;
-                        getRestaurantDTO.opening_time = restaurant.opening_time;
-                        getRestaurantDTO.closing_time = restaurant.closing_time;
-                        getRestaurantDTO.rating = restaurant.rating;
-                        getRestaurantDTO.price = restaurant.price;
-                        getRestaurantDTO.cuisine_type = cuisine_type;
-                        getRestaurantDTO.reservation_duration = restaurant.reservation_duration;
-                        //getRestaurantsDTO.image = Convert.ToBase64String(restaurant.image);
+                        var restaurantDTO =
+                            new RestaurantDTO
+                            {
+                                Id = restaurant.id,
+                                Name = restaurant.name,
+                                Description = restaurant.description,
+                                City = restaurant.city,
+                                Address = restaurant.address,
+                                PhoneNumber = restaurant.phone_number,
+                                OpeningTime = restaurant.opening_time,
+                                ClosingTime = restaurant.closing_time,
+                                Rating = restaurant.rating,
+                                Price = restaurant.price,
+                                CuisineType = cuisineType,
+                                ReservationDuration =
+                                    restaurant.reservation_duration,
+                            };
 
-                        getRestaurantsDTOs = getRestaurantsDTOs.Append(getRestaurantDTO);
+                        restaurantDTOs =
+                            restaurantDTOs.Append(restaurantDTO);
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Error processing restaurant with ID {restaurant.id}: {ex.Message}");
+                        Console.WriteLine(
+                            $"Error processing restaurant with ID {restaurant.id}: {ex.Message}"
+                        );
                     }
                 }
+
+                return new GetRestaurantsResponse
+                {
+                    Items = restaurantDTOs.ToList(),
+                    Page = result.Page,
+                    PageSize = result.PageSize,
+                    TotalCount = result.TotalCount,
+                };
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error retrieving restaurants: {ex.Message}");
-                return [];
-            }
+                Console.WriteLine(
+                    $"Error retrieving restaurants: {ex.Message}"
+                );
 
-            return getRestaurantsDTOs;
+                return new GetRestaurantsResponse
+                {
+                    Items = [],
+                    Page = request.Page,
+                    PageSize = request.PageSize,
+                    TotalCount = 0,
+                };
+            }
         }
 
         internal async Task<RestaurantDTO?> GetRestaurantByIdAsync(int id)
         {
             RestaurantDTO getRestaurantDTO = new RestaurantDTO();
+
             try
             {
-                Restaurant restaurant = await _restaurantsRepository.GetRestaurantByIdAsync(id);
+                var restaurant =
+                    await _restaurantsRepository.GetRestaurantByIdAsync(id);
+
                 if (restaurant == null)
                 {
-                    Console.WriteLine($"Restaurant with ID {id} not found.");
+                    Console.WriteLine(
+                        $"Restaurant with ID {id} not found."
+                    );
+
                     return null;
                 }
 
-                var cuisine_type = await GetCuisineTypeName(restaurant.cuisine_type);
+                var cuisineType =
+                    await GetCuisineTypeName(
+                        restaurant.cuisine_type
+                    );
 
-                getRestaurantDTO.id = restaurant.id;
-                getRestaurantDTO.name = restaurant.name;
-                getRestaurantDTO.description = restaurant.description;
-                getRestaurantDTO.city = restaurant.city;
-                getRestaurantDTO.address = restaurant.address;
-                getRestaurantDTO.phone_number = restaurant.phone_number;
-                getRestaurantDTO.opening_time = restaurant.opening_time;
-                getRestaurantDTO.closing_time = restaurant.closing_time;
-                getRestaurantDTO.rating = restaurant.rating;
-                getRestaurantDTO.price = restaurant.price;
-                getRestaurantDTO.cuisine_type = cuisine_type;
-                getRestaurantDTO.reservation_duration = restaurant.reservation_duration;
-                //getRestaurantsDTO.image = Convert.ToBase64String(restaurant.image);
+                getRestaurantDTO.Id = restaurant.id;
+                getRestaurantDTO.Name = restaurant.name;
+                getRestaurantDTO.Description = restaurant.description;
+                getRestaurantDTO.City = restaurant.city;
+                getRestaurantDTO.Address = restaurant.address;
+                getRestaurantDTO.PhoneNumber =restaurant.phone_number;
+                getRestaurantDTO.OpeningTime = restaurant.opening_time;
+                getRestaurantDTO.ClosingTime = restaurant.closing_time;
+                getRestaurantDTO.Rating = restaurant.rating;
+                getRestaurantDTO.Price = restaurant.price;
+                getRestaurantDTO.CuisineType = cuisineType;
+                getRestaurantDTO.ReservationDuration = restaurant.reservation_duration;
+                getRestaurantDTO.Image =
+                    restaurant.image is { Length: > 0 }
+                        ? Convert.ToBase64String(
+                            restaurant.image
+                        )
+                        : null;
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error retrieving restaurant with ID {id}: {e.Message}");
+                Console.WriteLine(
+                    $"Error retrieving restaurant with ID {id}: {e.Message}"
+                );
+
                 return null;
             }
 
             return getRestaurantDTO;
         }
-
+        
         internal async Task<GetRestaurantInfoResponse?> GetRestaurantInfoAsync(int id)
         {
             GetRestaurantInfoResponse restaurantInfoResponse = new();
