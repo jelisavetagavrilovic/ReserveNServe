@@ -233,7 +233,7 @@ namespace Restaurants.API.Handler
                             FoodName = menuItem.food_name,
                             Description = menuItem.description,
                             Price = menuItem.price,
-                            Image = Convert.ToBase64String(menuItem.image),
+                            Image = menuItem.image != null ? Convert.ToBase64String(menuItem.image) : null,
                             Category = menuItem.category
                         };
                         menuItemDTOs = menuItemDTOs.Append(menuItemDTO);
