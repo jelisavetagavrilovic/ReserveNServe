@@ -1,150 +1,171 @@
+import { apiRequest } from "@/lib/api/http-client"
+
 import {
-  mockRestaurants,
+  mockAvailableSlots,
   mockTables,
-  mockMenuItems,
-  mockAvailableSlots
 } from "../mock-data"
 
 import type {
-  RestaurantQueryRequest,
-  RestaurantListResponse,
+  AvailableSlotsResponse,
+  MenuItem,
+  MenuListResponse,
+  Restaurant,
   RestaurantDetailsResponse,
   RestaurantFiltersResponse,
-  TableListResponse,
+  RestaurantListResponse,
+  RestaurantQueryRequest,
   TableDetailsResponse,
-  MenuListResponse,
-  AvailableSlotsResponse,
+  TableListResponse,
 } from "../types/restaurant.types"
+
+
+const RESTAURANTS_API_URL =
+  process.env.NEXT_PUBLIC_RESTAURANTS_API_URL
+
+
+if (!RESTAURANTS_API_URL) {
+  throw new Error(
+    "NEXT_PUBLIC_RESTAURANTS_API_URL environment variable is not configured."
+  )
+}
+
+
+function restaurantsUrl(path = "") {
+  return `${RESTAURANTS_API_URL}/api/Restaurants${path}`
+}
 
 
 export async function getRestaurants(
   query?: RestaurantQueryRequest
 ): Promise<RestaurantListResponse> {
-  let results = [...mockRestaurants]
+  const params = new URLSearchParams()
 
   if (query?.search) {
-    const q = query.search.toLowerCase()
+    params.set("search", query.search)
+  }
 
-    results = results.filter(
-      (restaurant) =>
-        restaurant.name.toLowerCase().includes(q) ||
-        restaurant.cuisine_type.toLowerCase().includes(q) ||
-        restaurant.description.toLowerCase().includes(q)
+  if (
+    query?.cuisineType &&
+    query.cuisineType !== "all"
+  ) {
+    params.set(
+      "cuisineType",
+      query.cuisineType
     )
   }
 
-  if (query?.cuisine_type && query.cuisine_type !== "all") {
-    results = results.filter(
-      (restaurant) => restaurant.cuisine_type === query.cuisine_type
+  if (
+    query?.price &&
+    query.price !== "all"
+  ) {
+    params.set("price", query.price)
+  }
+
+  if (query?.sortBy) {
+    params.set("sortBy", query.sortBy)
+  }
+
+  if (query?.page !== undefined) {
+    params.set(
+      "page",
+      String(query.page)
     )
   }
 
-  if (query?.price && query.price !== "all") {
-    results = results.filter(
-      (restaurant) => restaurant.price_range === query.price
+  if (query?.pageSize !== undefined) {
+    params.set(
+      "pageSize",
+      String(query.pageSize)
     )
   }
 
-  if (query?.sortBy === "rating") {
-    results.sort((a, b) => b.rating - a.rating)
-  }
+  const queryString =
+    params.toString()
 
-  if (query?.sortBy === "name") {
-    results.sort((a, b) => a.name.localeCompare(b.name))
-  }
-
-  const page = query?.page ?? 1
-  const pageSize = query?.pageSize ?? 6
-
-  const totalCount = results.length
-  const totalPages = Math.ceil(
-    totalCount / pageSize
-  )
-
-  const start = (page - 1) * pageSize
-  const paginatedItems = results.slice(
-    start,
-    start + pageSize
-  )
-
-  // return new Promise((resolve) =>
-  //   setTimeout(() => resolve({ restaurants: results }), 300)
-  // )
-  return new Promise((resolve) =>
-    setTimeout(
-      () =>
-        resolve({
-          items: paginatedItems,
-          page,
-          pageSize,
-          totalCount,
-          totalPages,
-        }),
-      300
-    )
+  return apiRequest<RestaurantListResponse>(
+    `${restaurantsUrl("/GetRestaurants")}${
+      queryString
+        ? `?${queryString}`
+        : ""
+    }`
   )
 }
+
 
 export async function getRestaurantById(
   id: number
-): Promise<RestaurantDetailsResponse | null> {
-  const restaurant = mockRestaurants.find((r) => r.id === id)
-
-  return new Promise((resolve) =>
-    setTimeout(
-      () => resolve(restaurant ? { restaurant } : null),
-      200
+): Promise<RestaurantDetailsResponse> {
+  const restaurant =
+    await apiRequest<Restaurant>(
+      restaurantsUrl(
+        `/GetRestaurants/${id}`
+      )
     )
-  )
+
+  return {
+    restaurant,
+  }
 }
 
-export async function getTablesByRestaurant(
-  restaurantId: number
-): Promise<TableListResponse> {
-  const tables = mockTables.filter(
-    (table) => table.restaurantId === restaurantId
-  )
-
-  return new Promise((resolve) =>
-    setTimeout(() => resolve({ tables }), 200)
-  )
-}
-
-export async function getTableById(
-  id: number
-): Promise<TableDetailsResponse | null> {
-  const table = mockTables.find((table) => table.id === id)
-
-  return new Promise((resolve) =>
-    setTimeout(() => resolve(table ? { table } : null), 200)
-  )
-}
 
 export async function getMenuByRestaurant(
   restaurantId: number
 ): Promise<MenuListResponse> {
-  const items = mockMenuItems.filter(
-    (item) => item.restaurant_id === restaurantId
-  )
+  const items =
+    await apiRequest<MenuItem[]>(
+      restaurantsUrl(
+        `/GetMenuForRestaurant/${restaurantId}`
+      )
+    )
 
-  return new Promise((resolve) =>
-    setTimeout(() => resolve({ items }), 200)
+  return {
+    items,
+  }
+}
+
+
+export async function getRestaurantFilters():
+  Promise<RestaurantFiltersResponse> {
+  return apiRequest<RestaurantFiltersResponse>(
+    restaurantsUrl(
+      "/GetRestaurantsFilters"
+    )
   )
 }
 
-export async function getRestaurantFilters(): Promise<RestaurantFiltersResponse> {
-  const cuisines = Array.from(
-    new Set(mockRestaurants.map((restaurant) => restaurant.cuisine_type))
-  )
 
-  const rangePrices = Array.from(
-    new Set(mockRestaurants.map((restaurant) => restaurant.price_range))
-  )
+/*
+ * Temporary mock availability.
+ *
+ * These functions will be moved to the
+ * Reservations API integration next.
+ */
+export async function getTablesByRestaurant(
+  restaurantId: number
+): Promise<TableListResponse> {
+  const tables =
+    mockTables.filter(
+      (table) =>
+        table.restaurantId === restaurantId
+    )
 
   return {
-    cuisines,
-    rangePrices,
+    tables,
   }
+}
+
+
+export async function getTableById(
+  id: number
+): Promise<TableDetailsResponse | null> {
+  const table =
+    mockTables.find(
+      (table) => table.id === id
+    )
+
+  return table
+    ? { table }
+    : null
 }
 
 
@@ -153,12 +174,14 @@ export type AvailableSlotsRequest = {
   date: string
 }
 
+
 export async function getAvailableSlots(
   request: AvailableSlotsRequest
 ): Promise<AvailableSlotsResponse> {
-  const slots = mockAvailableSlots[request.restaurantId] || []
-
-  return new Promise((resolve) =>
-    setTimeout(() => resolve({ slots }), 200)
-  )
+  return {
+    slots:
+      mockAvailableSlots[
+        request.restaurantId
+      ] || [],
+  }
 }

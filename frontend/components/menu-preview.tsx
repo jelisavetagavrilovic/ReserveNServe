@@ -35,7 +35,7 @@ const categories: {
   { value: "appetizer", label: "Appetizers" },
   { value: "main", label: "Mains" },
   { value: "dessert", label: "Desserts" },
-  { value: "drinks", label: "Drinks" },
+  { value: "drink", label: "Drinks" },
 ]
 
 export function MenuPreview({
@@ -54,8 +54,8 @@ export function MenuPreview({
     dessert: menuItems.filter(
       (item) => item.category === "dessert"
     ),
-    drinks: menuItems.filter(
-      (item) => item.category === "drinks"
+    drink: menuItems.filter(
+      (item) => item.category === "drink"
     ),
   }
 
@@ -117,7 +117,7 @@ export function MenuPreview({
                               getImageSrc(item.image) ||
                               "/placeholder.svg"
                             }
-                            alt={item.food_name}
+                            alt={item.foodName}
                             fill
                             className="object-cover"
                           />
@@ -126,7 +126,7 @@ export function MenuPreview({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-4">
                             <h4 className="text-sm font-bold leading-snug">
-                              {item.food_name}
+                              {item.foodName}
                             </h4>
 
                             <span className="shrink-0 whitespace-nowrap text-sm font-semibold text-primary">

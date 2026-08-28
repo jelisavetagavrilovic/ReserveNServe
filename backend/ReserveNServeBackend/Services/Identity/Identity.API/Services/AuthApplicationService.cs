@@ -49,7 +49,9 @@ public class AuthApplicationService : IAuthApplicationService
         var user = new ApplicationUser
         {
             UserName = request.Email,
-            Email = request.Email
+            Email = request.Email,
+            FullName = request.FullName,
+            PhoneNumber = request.Phone
         };
 
         var result = await _userManager.CreateAsync(user, request.Password);
@@ -141,15 +143,175 @@ public class AuthApplicationService : IAuthApplicationService
         return new AppResult(StatusCodes.Status202Accepted, new { message = "Logged out." });
     }
 
-    public AppResult Me(ClaimsPrincipal user)
+    public async Task<AppResult> MeAsync(ClaimsPrincipal user)
     {
-        return new AppResult(StatusCodes.Status200OK, new
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+                                ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        if (userId is null)
         {
-            UserId = user.FindFirstValue(ClaimTypes.NameIdentifier)
-                     ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub),
-            Email = user.FindFirstValue(ClaimTypes.Email),
-            Claims = user.Claims.Select(c => new { c.Type, c.Value })
-        });
+            return new AppResult(
+                StatusCodes.Status401Unauthorized,
+                new { message = "Unauthorized." }
+            );
+        }
+
+        var appUser = await _userManager.FindByIdAsync(userId);
+
+        if (appUser is null)
+        {
+            return new AppResult(
+                StatusCodes.Status404NotFound,
+                new { message = "User not found." }
+            );
+        }
+
+        var roles = await _userManager.GetRolesAsync(appUser);
+
+        return new AppResult(
+            StatusCodes.Status200OK,
+            new
+            {
+                id = appUser.Id,
+                email = appUser.Email,
+                fullName = appUser.FullName,
+                phone = appUser.PhoneNumber,
+                roles
+            }
+        );
+    }
+
+    public async Task<AppResult> UpdateProfileAsync(
+    ClaimsPrincipal user,
+    UpdateProfileRequest request)
+    {
+        var userId =
+            user.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        if (userId is null)
+        {
+            return new AppResult(
+                StatusCodes.Status401Unauthorized,
+                new
+                {
+                    message = "Unauthorized."
+                }
+            );
+        }
+
+        var appUser =
+            await _userManager.FindByIdAsync(userId);
+
+        if (appUser is null)
+        {
+            return new AppResult(
+                StatusCodes.Status404NotFound,
+                new
+                {
+                    message = "User not found."
+                }
+            );
+        }
+
+
+        var emailChanged =
+            !string.Equals(
+                appUser.Email,
+                request.Email,
+                StringComparison.OrdinalIgnoreCase
+            );
+
+        if (emailChanged)
+        {
+            var existingUser =
+                await _userManager.FindByEmailAsync(request.Email);
+
+            if (
+                existingUser is not null &&
+                existingUser.Id != appUser.Id
+            )
+            {
+                return new AppResult(
+                    StatusCodes.Status409Conflict,
+                    new
+                    {
+                        message = "Email is already in use."
+                    }
+                );
+            }
+        }
+        appUser.FullName = request.FullName;
+        appUser.PhoneNumber = request.Phone;
+
+
+        if (emailChanged)
+        {
+            appUser.Email = request.Email;
+            appUser.UserName = request.Email;
+
+            
+            appUser.EmailConfirmed = false;
+        }
+
+
+        var updateResult =
+            await _userManager.UpdateAsync(appUser);
+
+        if (!updateResult.Succeeded)
+        {
+            return new AppResult(
+                StatusCodes.Status400BadRequest,
+                new
+                {
+                    message = "Profile update failed.",
+                    errors = updateResult.Errors.Select(
+                        e => new
+                        {
+                            e.Code,
+                            e.Description
+                        }
+                    )
+                }
+            );
+        }
+
+
+        if (emailChanged)
+        {
+            var token =
+                await _userManager.GenerateEmailConfirmationTokenAsync(
+                    appUser
+                );
+
+            await PublishSafelyAsync(
+                new UserRegistered(
+                    appUser.Id,
+                    appUser.Email!,
+                    token
+                ),
+                nameof(UserRegistered)
+            );
+        }
+
+
+        var roles =
+            await _userManager.GetRolesAsync(appUser);
+
+
+        return new AppResult(
+            StatusCodes.Status200OK,
+            new
+            {
+                id = appUser.Id,
+                email = appUser.Email,
+                fullName = appUser.FullName,
+                phone = appUser.PhoneNumber,
+                roles,
+
+                emailConfirmationRequired = emailChanged
+            }
+        );
     }
 
     public async Task<AppResult> LogoutAllAsync(ClaimsPrincipal user)

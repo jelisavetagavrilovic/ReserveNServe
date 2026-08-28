@@ -43,7 +43,7 @@ export function RestaurantCard({
 
           {/* Price range */}
           <div className="absolute right-3 top-3 rounded-full bg-background/90 px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur-sm">
-            {restaurant.price_range}
+            {restaurant.price}
           </div>
         </div>
 
@@ -64,7 +64,7 @@ export function RestaurantCard({
 
           {/* Cuisine */}
           <p className="mt-0.5 text-xs font-medium text-primary">
-            {restaurant.cuisine_type}
+            {restaurant.cuisineType}
           </p>
 
           {/* Description */}
@@ -84,7 +84,7 @@ export function RestaurantCard({
             <div className="flex items-center gap-1.5">
               <Clock className="h-4 w-4 shrink-0" />
               <span>
-                {restaurant.opening_time} - {restaurant.closing_time}
+                {restaurant.openingTime} - {restaurant.closingTime}
               </span>
             </div>
           </div>

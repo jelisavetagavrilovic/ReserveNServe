@@ -104,6 +104,242 @@
         condition: service_healthy
       mailpit:
         condition: service_started
+  
+  restaurants-api:
+    build:
+      context: ./Services/Restaurants/Restaurants.API
+      dockerfile: Dockerfile
+
+    container_name: reservenserve-restaurants
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: "http://+:8080;https://+:8081"
+
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/reservenserve.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${ASPNETCORE_HTTPS_CERTIFICATE_PASSWORD}
+
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=${RESTAURANTS_DB_NAME:-Restaurant};User Id=${RESTAURANTS_DB_USER:-restaurants_app};Password=${RESTAURANTS_DB_PASSWORD};TrustServerCertificate=True"
+
+    ports:
+      - "${RESTAURANTS_HTTP_PORT:-5174}:8080"
+      - "${RESTAURANTS_HTTPS_PORT:-7274}:8081"
+
+    volumes:
+      - "${ASPNET_HTTPS_PATH}:/https:ro"
+
+    depends_on:
+      restaurants-db-init:
+        condition: service_completed_successfully
+
+  restaurants-db-init:
+    build:
+      context: ./Services/Restaurants/Restaurants.API/Database
+      dockerfile: Dockerfile
+    container_name: reservenserve-restaurants-db-init
+
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      RESTAURANTS_DB_NAME: ${RESTAURANTS_DB_NAME:-Restaurant}
+      RESTAURANTS_DB_USER: ${RESTAURANTS_DB_USER:-restaurants_app}
+      RESTAURANTS_DB_PASSWORD: ${RESTAURANTS_DB_PASSWORD:?RESTAURANTS_DB_PASSWORD is required}
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+    entrypoint: ["/bin/bash", "-c"]
+
+    command:
+      - |
+        set -euo pipefail
+        
+        DB_EXISTS=$$(/opt/mssql-tools18/bin/sqlcmd \
+          -S sqlserver \
+          -U sa \
+          -P "$$MSSQL_SA_PASSWORD" \
+          -C \
+          -h -1 \
+          -W \
+          -Q "SET NOCOUNT ON; SELECT CASE WHEN DB_ID('$${RESTAURANTS_DB_NAME}') IS NULL THEN 0 ELSE 1 END;" \
+          | tr -d '[:space:]')
+
+        if [ "$$DB_EXISTS" = "0" ]; then
+          echo "Database '$$RESTAURANTS_DB_NAME' does not exist. Initializing..."
+
+          /opt/mssql-tools18/bin/sqlcmd \
+            -S sqlserver \
+            -U sa \
+            -P "$$MSSQL_SA_PASSWORD" \
+            -C \
+            -i /scripts/init.sql \
+            -v \
+              DB_NAME="$$RESTAURANTS_DB_NAME" \
+              DB_USER="$$RESTAURANTS_DB_USER" \
+              DB_PASSWORD="$$RESTAURANTS_DB_PASSWORD"
+
+          echo "Restaurant database initialized successfully."
+        else
+          echo "Database '$$RESTAURANTS_DB_NAME' already exists. Skipping initialization."
+        fi
+
+    restart: "no"
+
+    
+  payment-api:
+    build:
+      context: ./Services/Payment/Payment.API
+      dockerfile: Dockerfile
+
+    container_name: reservenserve-payment
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: "http://+:8080;https://+:8081"
+
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/reservenserve.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${ASPNETCORE_HTTPS_CERTIFICATE_PASSWORD}
+
+      PAYMENT_STRIPE_SECRET_KEY: ${PAYMENT_STRIPE_SECRET_KEY}
+      PAYMENT_STRIPE_WEBHOOK_SECRET: ${PAYMENT_STRIPE_WEBHOOK_SECRET}
+
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=${PAYMENT_DB_NAME:-Payment};User Id=${PAYMENT_DB_USER:-payment_app};Password=${PAYMENT_DB_PASSWORD};TrustServerCertificate=True"
+
+    ports:
+      - "${PAYMENT_HTTP_PORT:-5175}:8080"
+      - "${PAYMENT_HTTPS_PORT:-7275}:8081"
+
+    volumes:
+      - "${ASPNET_HTTPS_PATH}:/https:ro"
+
+    depends_on:
+      payment-db-init:
+        condition: service_completed_successfully
+
+  payment-db-init:
+    build:
+      context: ./Services/Payment/Payment.API/Database
+      dockerfile: Dockerfile
+
+    container_name: reservenserve-payment-db-init
+
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      PAYMENT_DB_NAME: ${PAYMENT_DB_NAME:-Restaurant}
+      PAYMENT_DB_USER: ${PAYMENT_DB_USER:-payment_app}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:?PAYMENT_DB_PASSWORD is required}
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+    entrypoint: ["/bin/bash", "-c"]
+
+    command:
+      - |
+        set -euo pipefail
+
+        DB_EXISTS=$$(/opt/mssql-tools18/bin/sqlcmd \
+          -S sqlserver \
+          -U sa \
+          -P "$$MSSQL_SA_PASSWORD" \
+          -C \
+          -h -1 \
+          -W \
+          -Q "SET NOCOUNT ON; SELECT CASE WHEN DB_ID('$${PAYMENT_DB_NAME}') IS NULL THEN 0 ELSE 1 END;" \
+          | tr -d '[:space:]')
+
+        if [ "$$DB_EXISTS" = "0" ]; then
+          echo "Database '$$PAYMENT_DB_NAME' does not exist. Initializing..."
+
+          /opt/mssql-tools18/bin/sqlcmd \
+            -S sqlserver \
+            -U sa \
+            -P "$$MSSQL_SA_PASSWORD" \
+            -C \
+            -i /scripts/init.sql \
+            -v \
+              DB_NAME="$$PAYMENT_DB_NAME" \
+              DB_USER="$$PAYMENT_DB_USER" \
+              DB_PASSWORD="$$PAYMENT_DB_PASSWORD"
+
+          echo "Restaurant database initialized successfully."
+        else
+          echo "Database '$$PAYMENT_DB_NAME' already exists. Skipping initialization."
+        fi
+
+    restart: "no"
+
+  reservations-db:
+    image: postgres:${POSTGRES_VERSION:-17}
+    container_name: reservenserve-reservations-db
+
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ReservationsDb}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+
+    volumes:
+      - reservations_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-ReservationsDb}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  reservations-api:
+    build:
+      context: ./Services/Reservations
+      dockerfile: Reservations.API/Dockerfile
+
+    container_name: reservenserve-reservations
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: "http://+:8080;https://+:8081"
+
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/reservenserve.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${ASPNETCORE_HTTPS_CERTIFICATE_PASSWORD}
+
+      DB_HOST: reservations-db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-ReservationsDb}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+    ports:
+      - "${RESERVATIONS_HTTP_PORT:-5040}:8080"
+      - "${RESERVATIONS_HTTPS_PORT:-7294}:8081"
+
+    volumes:
+      - ${HOME}/.aspnet/https:/https:ro
+
+    depends_on:
+      reservations-db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_RESERVATIONS_API_URL: ${NEXT_PUBLIC_RESERVATIONS_API_URL:-https://localhost:7294}
+        NEXT_PUBLIC_RESTAURANTS_API_URL: ${NEXT_PUBLIC_RESTAURANTS_API_URL:-http://localhost:5174}
+
+    container_name: reservenserve-frontend
+
+    environment:
+      NODE_ENV: production
+
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
 
 
   reservations-db:

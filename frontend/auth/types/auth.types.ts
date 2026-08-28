@@ -5,11 +5,10 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
+  fullName: string
   email: string
+  phone: string
   password: string
-  name: string     
-  phone?: string   
-  role?: string
 }
 
 export interface RefreshRequest {
@@ -20,6 +19,21 @@ export interface LogoutRequest {
   refreshToken: string
 }
 
+export interface ConfirmEmailRequest {
+  userId: string
+  token: string
+}
+
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface ResetPasswordRequest {
+  userId: string
+  token: string
+  newPassword: string
+}
+
 // responses
 export interface AuthResponse {
   accessToken: string
@@ -27,11 +41,33 @@ export interface AuthResponse {
   expiresAtUtc: string
 }
 
+export interface RegisterResponse {
+  message: string
+  dev?: {
+    userId: string
+    token: string
+  }
+}
+
+export interface MessageResponse {
+  message: string
+}
+
 // user
 export interface User {
   id: string
   email: string
-  name: string     
+  fullName: string     
   phone?: string   
-  role?: string
+  roles: string[]
+}
+
+export interface PendingOwnerRequest {
+  email: string
+  userName: string
+  ownerRequestedAtUtc: string
+}
+
+export interface ApproveOwnerRequest {
+  email: string
 }

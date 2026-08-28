@@ -403,14 +403,14 @@ export default function RestaurantDetailPage() {
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   <span>
-                    {restaurant.phone_number}
+                    {restaurant.phoneNumber}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
                   <span>
-                    {restaurant.opening_time} - {restaurant.closing_time}
+                    {restaurant.openingTime} - {restaurant.closingTime}
                   </span>
                 </div>
               </div>
