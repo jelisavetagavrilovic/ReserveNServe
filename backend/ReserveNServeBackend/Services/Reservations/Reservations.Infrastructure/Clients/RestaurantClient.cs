@@ -1,72 +1,106 @@
+using Grpc.Core;
 using Reservations.Application.DTOs.External.Restaurant;
 using Reservations.Application.Interfaces;
+using Contracts = global::ReserveNServe.Contracts.Restaurants;
 
 namespace Reservations.Infrastructure.Clients;
 
 public class RestaurantClient : IRestaurantClient
 {
-    public Task<RestaurantInfoResponse?> GetRestaurantInfoAsync(int restaurantId)
+    private readonly Contracts.RestaurantsService.RestaurantsServiceClient
+        _grpcClient;
+
+    public RestaurantClient(
+        Contracts.RestaurantsService.RestaurantsServiceClient grpcClient)
     {
-        // TODO: kasnije ide gRPC poziv ka Restaurant servisu
-
-        var response = new RestaurantInfoResponse
-        {
-            RestaurantName = "Test Restaurant",
-            RestaurantAddress = "Main Street 1",
-            RestaurantCity = "Belgrade",
-
-            OpeningTime = new TimeOnly(9, 0, 0),
-            ClosingTime = new TimeOnly(23, 0, 0),
-
-            ReservationDurationMinutes = 180,
-
-            TableGroups =
-            [
-                new TableGroupResponse
-                {
-                    Id = 1,
-                    Capacity = 2,
-                    Location = "Inside",
-                    TableCount = 5
-                },
-                new TableGroupResponse
-                {
-                    Id = 2,
-                    Capacity = 4,
-                    Location = "Inside",
-                    TableCount = 8
-                },
-                new TableGroupResponse
-                {
-                    Id = 3,
-                    Capacity = 6,
-                    Location = "Terrace",
-                    TableCount = 3
-                }
-            ]
-        };
-
-        return Task.FromResult<RestaurantInfoResponse?>(response);
+        _grpcClient = grpcClient;
     }
 
-
-    public Task<IReadOnlyList<MenuItemResponse>> GetMenuItemsAsync(
-        IEnumerable<int> menuItemIds)
+    public async Task<RestaurantInfoResponse?>
+        GetRestaurantInfoAsync(int restaurantId)
     {
-        // TODO: kasnije ide gRPC poziv ka Restaurant servisu
-
-        var items = new List<MenuItemResponse>();
-
-        foreach (var id in menuItemIds)
+        try
         {
-            items.Add(new MenuItemResponse
+            var response =
+                await _grpcClient.GetRestaurantInfoAsync(
+                    new Contracts.GetRestaurantInfoRequest
+                    {
+                        RestaurantId = restaurantId
+                    });
+
+            return new RestaurantInfoResponse
             {
-                MenuItemId = id,
-                FoodName = $"Food item {id}",
-                Price = 10m
-            });
+                RestaurantName = response.RestaurantName,
+                RestaurantAddress = response.RestaurantAddress,
+                RestaurantCity = response.RestaurantCity,
+
+                OpeningTime =
+                    TimeOnly.Parse(response.OpeningTime),
+
+                ClosingTime =
+                    TimeOnly.Parse(response.ClosingTime),
+
+                ReservationDurationMinutes =
+                    response.ReservationDurationMinutes,
+
+                TableGroups =
+                    response.TableGroups
+                        .Select(table =>
+                            new TableGroupResponse
+                            {
+                                Id = table.Id,
+                                Location = table.Location,
+                                Capacity = table.Capacity,
+                                TableCount = table.TableCount
+                            })
+                        .ToList()
+            };
+        }
+        catch (RpcException ex)
+            when (ex.StatusCode == StatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<MenuItemResponse>>
+        GetMenuItemsAsync(
+            int restaurantId,
+            IEnumerable<int> menuItemIds)
+    {
+        var ids =
+            menuItemIds
+                .Distinct()
+                .ToList();
+
+        if (ids.Count == 0)
+        {
+            return [];
         }
 
-        return Task.FromResult<IReadOnlyList<MenuItemResponse>>(items);
+        var request =
+            new Contracts.GetMenuItemsRequest
+            {
+                RestaurantId = restaurantId
+            };
+
+        request.MenuItemIds.AddRange(ids);
+
+        var response =
+            await _grpcClient.GetMenuItemsAsync(
+                request);
+
+        return response.MenuItems
+            .Select(item =>
+                new MenuItemResponse
+                {
+                    MenuItemId = item.MenuItemId,
+                    FoodName = item.FoodName,
+
+                    Price = decimal.Parse(
+                        item.Price,
+                        System.Globalization.CultureInfo.InvariantCulture)
+                })
+            .ToList();
     }
 }

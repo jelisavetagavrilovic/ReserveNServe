@@ -4,6 +4,8 @@
 /// cancelling reservations and starting food payments.
 /// </summary>
 
+using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Reservations.Application.DTOs.Requests;
 using Reservations.Application.DTOs.Responses;

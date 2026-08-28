@@ -106,6 +106,7 @@ public class ReservationService : IReservationService
     }
 
     private async Task<List<Order>> BuildOrdersAsync(
+        int restaurantId,
         IEnumerable<OrderRequest>? requests)
     {
         var requestList =
@@ -127,6 +128,7 @@ public class ReservationService : IReservationService
 
         var menuItems =
             await _restaurantClient.GetMenuItemsAsync(
+                restaurantId,
                 requestList.Select(
                     request => request.MenuItemId));
 
@@ -226,13 +228,53 @@ public class ReservationService : IReservationService
         DateTime startTime,
         DateTime endTime)
     {
-        var openingDateTime =
-            startTime.Date.Add(
-                restaurant.OpeningTime.ToTimeSpan());
+        var openingTime =
+            restaurant.OpeningTime.ToTimeSpan();
 
-        var closingDateTime =
-            startTime.Date.Add(
-                restaurant.ClosingTime.ToTimeSpan());
+        var closingTime =
+            restaurant.ClosingTime.ToTimeSpan();
+
+        DateTime openingDateTime;
+        DateTime closingDateTime;
+
+        // Restaurant closes after midnight.
+        // Example: 09:00 -> 03:00.
+        if (closingTime <= openingTime)
+        {
+            // 00:00 - 03:00 belongs to the previous day's
+            // restaurant working period.
+            if (startTime.TimeOfDay <= closingTime)
+            {
+                openingDateTime =
+                    startTime.Date
+                        .AddDays(-1)
+                        .Add(openingTime);
+
+                closingDateTime =
+                    startTime.Date
+                        .Add(closingTime);
+            }
+            else
+            {
+                openingDateTime =
+                    startTime.Date
+                        .Add(openingTime);
+
+                closingDateTime =
+                    startTime.Date
+                        .AddDays(1)
+                        .Add(closingTime);
+            }
+        }
+        else
+        {
+            // Normal working hours, e.g. 09:00 -> 23:00.
+            openingDateTime =
+                startTime.Date.Add(openingTime);
+
+            closingDateTime =
+                startTime.Date.Add(closingTime);
+        }
 
         if (startTime < openingDateTime)
         {
@@ -272,6 +314,12 @@ public class ReservationService : IReservationService
         var closing =
             date.ToDateTime(
                 restaurant.ClosingTime);
+
+        if (restaurant.ClosingTime <=
+            restaurant.OpeningTime)
+        {
+            closing = closing.AddDays(1);
+        }
 
         while (
             current
@@ -421,6 +469,7 @@ public class ReservationService : IReservationService
 
         var orders =
             await BuildOrdersAsync(
+                request.RestaurantId,
                 request.Orders);
 
         reservation.SetOrders(
@@ -574,6 +623,7 @@ public class ReservationService : IReservationService
 
         var orders =
             await BuildOrdersAsync(
+                reservation.RestaurantId,
                 request.Orders);
 
         reservation.SetOrders(

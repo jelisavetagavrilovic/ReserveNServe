@@ -2,6 +2,7 @@
 // Configures dependency injection, database context,
 // application services, middleware, and API endpoints.
 
+using System;
 using Microsoft.EntityFrameworkCore;
 using Reservations.Application.Interfaces;
 using Reservations.Application.Services;
@@ -10,8 +11,12 @@ using Reservations.Infrastructure.Repositories;
 using Reservations.Infrastructure.Clients;
 using Reservations.API.Middleware;
 using System.Text.Json.Serialization;
+using Contracts = global::ReserveNServe.Contracts.Restaurants;
 
 using DotNetEnv;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 Env.Load();
 
@@ -53,6 +58,15 @@ builder.Services.AddDbContext<ReservationsDbContext>(options =>
 
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
+
+builder.Services.AddGrpcClient<Contracts.RestaurantsService.RestaurantsServiceClient>(
+    options =>
+    {
+        options.Address =
+            new Uri(
+                builder.Configuration[
+                    "GrpcServices:Restaurants"]!);
+    });
 builder.Services.AddScoped<IRestaurantClient, RestaurantClient>();
 builder.Services.AddScoped<IPaymentClient, PaymentClient>();
 builder.Services.AddScoped<INotificationClient, NotificationClient>();

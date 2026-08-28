@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+option csharp_namespace = "ReserveNServe.Contracts.Restaurants";
+
+package restaurants;
+
+service RestaurantsService {
+    rpc GetRestaurantInfo (GetRestaurantInfoRequest)
+        returns (GetRestaurantInfoReply);
+
+    rpc GetMenuItems (GetMenuItemsRequest)
+        returns (GetMenuItemsReply);
+}
+
+message GetRestaurantInfoRequest {
+    int32 restaurant_id = 1;
+}
+
+message GetRestaurantInfoReply {
+    string restaurant_name = 1;
+    string restaurant_address = 2;
+    string restaurant_city = 3;
+    string opening_time = 4;
+    string closing_time = 5;
+    int32 reservation_duration_minutes = 6;
+
+    repeated TableGroupReply table_groups = 7;
+}
+
+message TableGroupReply {
+    int32 id = 1;
+    string location = 2;
+    int32 capacity = 3;
+    int32 table_count = 4;
+}
+
+message GetMenuItemsRequest {
+    int32 restaurant_id = 1;
+    repeated int32 menu_item_ids = 2;
+}
+
+message GetMenuItemsReply {
+    repeated MenuItemReply menu_items = 1;
+}
+
+message MenuItemReply {
+    int32 menu_item_id = 1;
+    string food_name = 2;
+    string price = 3;
+}

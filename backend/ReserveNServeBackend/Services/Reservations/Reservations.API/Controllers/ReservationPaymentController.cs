@@ -3,6 +3,7 @@
 /// from the Payment service.
 /// </summary>
 
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Reservations.Application.DTOs.External.Payment;
 using Reservations.Application.Interfaces;

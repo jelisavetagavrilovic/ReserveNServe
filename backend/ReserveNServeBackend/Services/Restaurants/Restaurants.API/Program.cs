@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Restaurants.API.Data;
 using Restaurants.API.Handler;
 using Restaurants.API.Repositories;
+using Restaurants.API.GrpcServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddControllers();
+
+builder.Services.AddGrpc();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -40,12 +43,17 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("Frontend");
 
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapGrpcService<RestaurantsGrpcService>();
 
 app.Run();
