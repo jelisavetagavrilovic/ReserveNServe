@@ -35,7 +35,7 @@ const categories: {
   { value: "appetizer", label: "Appetizers" },
   { value: "main", label: "Mains" },
   { value: "dessert", label: "Desserts" },
-  { value: "drinks", label: "Drinks" },
+  { value: "drink", label: "Drinks" },
 ]
 
 export function MenuPreview({
@@ -54,8 +54,8 @@ export function MenuPreview({
     dessert: menuItems.filter(
       (item) => item.category === "dessert"
     ),
-    drinks: menuItems.filter(
-      (item) => item.category === "drinks"
+    drink: menuItems.filter(
+      (item) => item.category === "drink"
     ),
   }
 

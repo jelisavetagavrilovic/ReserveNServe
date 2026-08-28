@@ -60,7 +60,7 @@ export type MenuCategory =
   | "appetizer"
   | "main"
   | "dessert"
-  | "drinks"
+  | "drink"
 
 export type MenuItem = {
   id: number

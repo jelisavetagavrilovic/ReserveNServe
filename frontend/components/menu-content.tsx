@@ -53,7 +53,7 @@ const categories: {
     label: "Desserts",
   },
   {
-    value: "drinks",
+    value: "drink",
     label: "Drinks",
   },
 ]
@@ -85,8 +85,8 @@ export function MenuContent({
       (item) => item.category === "dessert"
     ),
 
-    drinks: menuItems.filter(
-      (item) => item.category === "drinks"
+    drink: menuItems.filter(
+      (item) => item.category === "drink"
     ),
   }
 
