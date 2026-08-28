@@ -53,7 +53,7 @@ const categories: {
     label: "Desserts",
   },
   {
-    value: "drinks",
+    value: "drink",
     label: "Drinks",
   },
 ]
@@ -85,8 +85,8 @@ export function MenuContent({
       (item) => item.category === "dessert"
     ),
 
-    drinks: menuItems.filter(
-      (item) => item.category === "drinks"
+    drink: menuItems.filter(
+      (item) => item.category === "drink"
     ),
   }
 
@@ -163,7 +163,7 @@ export function MenuContent({
                             getImageSrc(item.image) ||
                             "/placeholder.svg"
                           }
-                          alt={item.food_name}
+                          alt={item.foodName}
                           fill
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
                         />
@@ -178,7 +178,7 @@ export function MenuContent({
                           <div className="min-w-0">
 
                             <h4 className="font-semibold">
-                              {item.food_name}
+                              {item.foodName}
                             </h4>
 
                             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
@@ -213,7 +213,7 @@ export function MenuContent({
                                     cartItem.quantity - 1
                                   )
                                 }
-                                aria-label={`Decrease ${item.food_name} quantity`}
+                                aria-label={`Decrease ${item.foodName} quantity`}
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
@@ -235,7 +235,7 @@ export function MenuContent({
                                     cartItem.quantity + 1
                                   )
                                 }
-                                aria-label={`Increase ${item.food_name} quantity`}
+                                aria-label={`Increase ${item.foodName} quantity`}
                               >
                                 <Plus className="h-3 w-3" />
                               </Button>

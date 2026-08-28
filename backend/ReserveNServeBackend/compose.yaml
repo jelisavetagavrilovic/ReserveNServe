@@ -126,14 +126,16 @@
       - "${RESTAURANTS_HTTPS_PORT:-7274}:8081"
 
     volumes:
-      - ${USERPROFILE}/.aspnet/https:/https:ro
+      - "${ASPNET_HTTPS_PATH}:/https:ro"
 
     depends_on:
       restaurants-db-init:
         condition: service_completed_successfully
 
   restaurants-db-init:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    build:
+      context: ./Services/Restaurants/Restaurants.API/Database
+      dockerfile: Dockerfile
     container_name: reservenserve-restaurants-db-init
 
     environment:
@@ -141,9 +143,6 @@
       RESTAURANTS_DB_NAME: ${RESTAURANTS_DB_NAME:-Restaurant}
       RESTAURANTS_DB_USER: ${RESTAURANTS_DB_USER:-restaurants_app}
       RESTAURANTS_DB_PASSWORD: ${RESTAURANTS_DB_PASSWORD:?RESTAURANTS_DB_PASSWORD is required}
-
-    volumes:
-      - ./Services/Restaurants/Restaurants.API/Database/init.sql:/scripts/init.sql:ro
 
     depends_on:
       sqlserver:
@@ -153,6 +152,8 @@
 
     command:
       - |
+        set -euo pipefail
+        
         DB_EXISTS=$$(/opt/mssql-tools18/bin/sqlcmd \
           -S sqlserver \
           -U sa \
@@ -183,6 +184,7 @@
         fi
 
     restart: "no"
+
     
   payment-api:
     build:
@@ -192,30 +194,33 @@
     container_name: reservenserve-payment
 
     environment:
-      ASPNETCORE_ENVIRONMENT: ${PAYMENT_ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ASPNETCORE_URLS: "http://+:8080;https://+:8081"
 
       ASPNETCORE_Kestrel__Certificates__Default__Path: /https/reservenserve.pfx
-      ASPNETCORE_Kestrel__Certificates__Default__Password: ${PAYMENT_ASPNETCORE_HTTPS_CERTIFICATE_PASSWORD}
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${ASPNETCORE_HTTPS_CERTIFICATE_PASSWORD}
 
       PAYMENT_STRIPE_SECRET_KEY: ${PAYMENT_STRIPE_SECRET_KEY}
       PAYMENT_STRIPE_WEBHOOK_SECRET: ${PAYMENT_STRIPE_WEBHOOK_SECRET}
 
-      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=${PAYMENT_DB_NAME:-Restaurant};User Id=${PAYMENT_DB_USER:-payment_app};Password=${PAYMENT_DB_PASSWORD};TrustServerCertificate=True"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=${PAYMENT_DB_NAME:-Payment};User Id=${PAYMENT_DB_USER:-payment_app};Password=${PAYMENT_DB_PASSWORD};TrustServerCertificate=True"
 
     ports:
-      - "${PAYMENT_HTTP_PORT:-5174}:8080"
-      - "${PAYMENT_HTTPS_PORT:-7274}:8081"
+      - "${PAYMENT_HTTP_PORT:-5175}:8080"
+      - "${PAYMENT_HTTPS_PORT:-7275}:8081"
 
     volumes:
-      - ${USERPROFILE}/.aspnet/https:/https:ro
+      - "${ASPNET_HTTPS_PATH}:/https:ro"
 
     depends_on:
       payment-db-init:
         condition: service_completed_successfully
 
   payment-db-init:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    build:
+      context: ./Services/Payment/Payment.API/Database
+      dockerfile: Dockerfile
+
     container_name: reservenserve-payment-db-init
 
     environment:
@@ -223,9 +228,6 @@
       PAYMENT_DB_NAME: ${PAYMENT_DB_NAME:-Restaurant}
       PAYMENT_DB_USER: ${PAYMENT_DB_USER:-payment_app}
       PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:?PAYMENT_DB_PASSWORD is required}
-
-    volumes:
-      - ./Services/Payment/Payment.API/Database/init.sql:/scripts/init.sql:ro
 
     depends_on:
       sqlserver:
@@ -235,6 +237,8 @@
 
     command:
       - |
+        set -euo pipefail
+
         DB_EXISTS=$$(/opt/mssql-tools18/bin/sqlcmd \
           -S sqlserver \
           -U sa \
@@ -327,6 +331,7 @@
       args:
         NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
         NEXT_PUBLIC_RESERVATIONS_API_URL: ${NEXT_PUBLIC_RESERVATIONS_API_URL:-https://localhost:7294}
+        NEXT_PUBLIC_RESTAURANTS_API_URL: ${NEXT_PUBLIC_RESTAURANTS_API_URL:-http://localhost:5174}
 
     container_name: reservenserve-frontend
 

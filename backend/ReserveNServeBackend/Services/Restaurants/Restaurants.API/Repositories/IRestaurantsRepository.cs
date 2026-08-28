@@ -6,7 +6,9 @@ namespace Restaurants.API.Repositories
 {
     public interface IRestaurantsRepository
     {
-        public Task<IEnumerable<Restaurant>> GetRestaurantsAsync(GetRestaurantsRequest request);
+        Task<PagedResult<Restaurant>> GetRestaurantsAsync(
+            GetRestaurantsRequest request
+        );
         public Task<Restaurant?> GetRestaurantByIdAsync(int id);
         public Task<IEnumerable<Table>> GetTablesForRestaurantAsync(int restaurantId);
         public Task<Table?> GetTableAsync(int id);

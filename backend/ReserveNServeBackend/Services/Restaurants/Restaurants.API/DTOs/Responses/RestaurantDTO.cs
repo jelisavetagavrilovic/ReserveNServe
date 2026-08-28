@@ -2,18 +2,18 @@
 {
     public class RestaurantDTO
     {
-        public int id { get; set; }
-        public string name { get; set; }
-        public string? description { get; set; }
-        public string city { get; set; }
-        public string address { get; set; }
-        public string phone_number { get; set; }
-        public TimeOnly opening_time { get; set; }
-        public TimeOnly closing_time { get; set; }
-        public double rating { get; set; }
-        public string price { get; set; }
-        public string cuisine_type { get; set; }
-        public int reservation_duration { get; set; }
-        public string? image { get; set; }
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string City { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+        public TimeOnly OpeningTime { get; set; }
+        public TimeOnly ClosingTime { get; set; }
+        public double Rating { get; set; }
+        public string Price { get; set; } = string.Empty;
+        public string CuisineType { get; set; } = string.Empty;
+        public int ReservationDuration { get; set; }
+        public string? Image { get; set; }
     }
 }

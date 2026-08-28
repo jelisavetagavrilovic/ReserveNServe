@@ -1,28 +1,27 @@
 import type { PaginatedResponse } from "./pagination.types"
 
-// restaurants
+
 export type Restaurant = {
   id: number
   name: string
-  description: string
+  description: string | null
   city: string
   address: string
-  phone_number: string
-  opening_time: string
-  closing_time: string
+  phoneNumber: string
+  openingTime: string
+  closingTime: string
   rating: number
-  price_range: string
-  cuisine_type: string
-  reservation_duration: string
-  image: string
+  price: string
+  cuisineType: string
+  reservationDuration: number
+  image: string | null
 }
 
 export type RestaurantQueryRequest = {
   search?: string
-  cuisine_type?: string
+  cuisineType?: string
   price?: string
   sortBy?: "rating" | "name"
-
   page?: number
   pageSize?: number
 }
@@ -39,13 +38,13 @@ export type RestaurantFiltersResponse = {
   rangePrices: string[]
 }
 
-// tables
+// Table represents a table in a restaurant
 export type Table = {
   id: number
   restaurantId: number
   seats: number
   location: string
-  available_number: number
+  availableNumber: number
 }
 
 export type TableListResponse = {
@@ -56,17 +55,17 @@ export type TableDetailsResponse = {
   table: Table
 }
 
-// menu
+// MenuCategory represents the category of a menu item
 export type MenuCategory =
   | "appetizer"
   | "main"
   | "dessert"
-  | "drinks"
+  | "drink"
 
 export type MenuItem = {
   id: number
-  restaurant_id: number
-  food_name: string
+  restaurantId: number
+  foodName: string
   description: string
   price: number
   image: string
@@ -77,7 +76,7 @@ export type MenuListResponse = {
   items: MenuItem[]
 }
 
-// available slots
+// AvailableSlotsResponse represents the response for available reservation slots for a restaurant
 export type AvailableSlotsResponse = {
   slots: string[]
 }

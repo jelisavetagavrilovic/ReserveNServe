@@ -14,38 +14,50 @@ namespace Restaurants.API.Repositories
             _restaurantsContext = dbContext;
         }
 
-        public async Task<IEnumerable<Restaurant>> GetRestaurantsAsync(GetRestaurantsRequest request)
+        public async Task<PagedResult<Restaurant>> GetRestaurantsAsync(
+            GetRestaurantsRequest request
+        )
         {
-            IQueryable<Restaurant> query = _restaurantsContext.Restaurants.AsQueryable();
-            if (!string.IsNullOrEmpty(request.search))
+            IQueryable<Restaurant> query =
+                _restaurantsContext.Restaurants.AsQueryable();
+
+            if (!string.IsNullOrEmpty(request.Search))
             {
-                query = query.Where(e => EF.Functions.Like(e.name, $"%{request.search}%") ||
-                                         EF.Functions.Like(e.city, $"%{request.search}%") ||
-                                         EF.Functions.Like(e.address, $"%{request.search}%"));
+                query = query.Where(e =>
+                    EF.Functions.Like(e.name, $"%{request.Search}%") ||
+                    EF.Functions.Like(e.city, $"%{request.Search}%") ||
+                    EF.Functions.Like(e.address, $"%{request.Search}%"));
             }
-            if (!string.IsNullOrEmpty(request.cuisine_type))
+
+            if (!string.IsNullOrEmpty(request.CuisineType))
             {
-                var cuisine_type = await GetCuisineTypeIdAsync(request.cuisine_type);
-                query = query.Where(e => e.cuisine_type == cuisine_type);
+                var cuisineType =
+                    await GetCuisineTypeIdAsync(request.CuisineType);
+
+                query = query.Where(e =>
+                    e.cuisine_type == cuisineType);
             }
-            if (!string.IsNullOrEmpty(request.price))
+
+            if (!string.IsNullOrEmpty(request.Price))
             {
-                query = query.Where(e => EF.Functions.Like(e.price, $"{request.price}"));
+                query = query.Where(e =>
+                    EF.Functions.Like(e.price, request.Price));
             }
-            if (!string.IsNullOrEmpty(request.sort_by))
+
+            if (!string.IsNullOrEmpty(request.SortBy))
             {
-                switch (request.sort_by)
+                switch (request.SortBy)
                 {
                     case "name":
                         query = query.OrderBy(e => e.name);
                         break;
+
                     case "rating":
                         query = query.OrderByDescending(e => e.rating);
                         break;
+
                     case "price":
                         query = query.OrderByDescending(e => e.price);
-                        break;
-                    default:
                         break;
                 }
             }
@@ -54,7 +66,20 @@ namespace Restaurants.API.Repositories
                 query = query.OrderBy(e => e.name);
             }
 
-            return await query.Skip((request.page - 1) * request.page_size).Take(request.page_size).ToListAsync();
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToListAsync();
+
+            return new PagedResult<Restaurant>
+            {
+                Items = items,
+                Page = request.Page,
+                PageSize = request.PageSize,
+                TotalCount = totalCount,
+            };
         }
 
         public async Task<Restaurant?> GetRestaurantByIdAsync(int id)
@@ -67,7 +92,7 @@ namespace Restaurants.API.Repositories
             return await _restaurantsContext.Tables.Where(t => t.restaurant_id == restaurantId).OrderBy(e => e.location).ToListAsync();
         }
 
-        public async Task<Table> GetTableAsync(int id)
+        public async Task<Table?> GetTableAsync(int id)
         {
             return await _restaurantsContext.Tables.Where(t => t.id == id).FirstOrDefaultAsync();
         }
