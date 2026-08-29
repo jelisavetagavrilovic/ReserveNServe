@@ -39,12 +39,14 @@ public interface IReservationService
 
     Task<List<AvailableSlotResponse>> GetAvailableSlotsAsync(
         int restaurantId,
-        DateOnly date);
+        DateOnly date,
+        int guestNumber);
 
     Task<List<AvailableTableResponse>> GetAvailableTablesAsync(
         int restaurantId,
         DateOnly date,
-        TimeOnly time);
+        TimeOnly time,
+        int guestNumber);
 
     Task HandlePaymentStatusUpdateAsync(
         PaymentStatusUpdateRequest request);

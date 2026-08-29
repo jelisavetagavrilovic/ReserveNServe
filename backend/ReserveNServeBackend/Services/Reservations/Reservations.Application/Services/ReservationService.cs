@@ -298,35 +298,79 @@ public class ReservationService : IReservationService
     public async Task<List<AvailableSlotResponse>>
         GetAvailableSlotsAsync(
             int restaurantId,
-            DateOnly date)
+            DateOnly date,
+            int guestNumber)
     {
+        if (guestNumber <= 0)
+        {
+            throw new InvalidOperationException(
+                "Guest number must be greater than zero.");
+        }
+
         var restaurant =
             await GetRestaurantInfoAsync(
                 restaurantId);
 
-        var slots =
-            new List<AvailableSlotResponse>();
+        var slots = new List<AvailableSlotResponse>();
 
         var current =
-            date.ToDateTime(
-                restaurant.OpeningTime);
+            DateTime.SpecifyKind(
+                date.ToDateTime(
+                    restaurant.OpeningTime),
+                DateTimeKind.Utc);
 
         var closing =
-            date.ToDateTime(
-                restaurant.ClosingTime);
+            DateTime.SpecifyKind(
+                date.ToDateTime(
+                    restaurant.ClosingTime),
+                DateTimeKind.Utc);
 
+        // Restaurant closes after midnight.
         if (restaurant.ClosingTime <=
             restaurant.OpeningTime)
         {
             closing = closing.AddDays(1);
         }
 
+
+        // Current local time of the restaurant.
+        // For now all restaurants are in Serbia.
+        var serbiaTimeZone =
+            TimeZoneInfo.FindSystemTimeZoneById(
+                "Europe/Belgrade");
+
+        var now =
+            TimeZoneInfo.ConvertTimeFromUtc(
+                DateTime.UtcNow,
+                serbiaTimeZone);
+
+
+        // If reservation is for today,
+        // start from the next 30-minute slot.
+        if (date == DateOnly.FromDateTime(now))
+        {
+            var nextSlot =
+                now.Date
+                    .AddHours(now.Hour)
+                    .AddMinutes(
+                        ((now.Minute / 30) + 1) * 30);
+
+            var nextSlotUtc =
+                DateTime.SpecifyKind(
+                    nextSlot,
+                    DateTimeKind.Utc);
+
+            if (nextSlotUtc > current)
+            {
+                current = nextSlotUtc;
+            }
+        }
+
         while (
             current
                 .AddMinutes(
                     restaurant.ReservationDurationMinutes)
-            <= closing
-        )
+            <= closing)
         {
             var end =
                 current.AddMinutes(
@@ -336,6 +380,13 @@ public class ReservationService : IReservationService
 
             foreach (var tableGroup in restaurant.TableGroups)
             {
+                // Skip table groups that cannot fit
+                // the requested number of guests.
+                if (tableGroup.Capacity < guestNumber)
+                {
+                    continue;
+                }
+
                 var reservedTables =
                     await _reservationRepository
                         .CountActiveReservationsAsync(
@@ -372,19 +423,28 @@ public class ReservationService : IReservationService
         GetAvailableTablesAsync(
             int restaurantId,
             DateOnly date,
-            TimeOnly time)
+            TimeOnly time,
+            int guestNumber)
     {
+        if (guestNumber <= 0)
+        {
+            throw new InvalidOperationException(
+                "Guest number must be greater than zero.");
+        }
+
         var restaurant =
             await GetRestaurantInfoAsync(
                 restaurantId);
 
         var startTime =
-            date.ToDateTime(time);
+            DateTime.SpecifyKind(
+                date.ToDateTime(time),
+                DateTimeKind.Utc);
 
         var endTime =
             startTime.AddMinutes(
                 restaurant.ReservationDurationMinutes);
-        
+
         ValidateWorkingHours(
             restaurant,
             startTime,
@@ -403,7 +463,8 @@ public class ReservationService : IReservationService
                         endTime);
 
             var available =
-                tableGroup.TableCount - reservedTables;
+                tableGroup.TableCount -
+                reservedTables;
 
             availableTables.Add(
                 new AvailableTableResponse

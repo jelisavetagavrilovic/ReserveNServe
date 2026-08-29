@@ -47,6 +47,13 @@ export type Table = {
   availableNumber: number
 }
 
+export type AvailableTablesRequest = {
+  restaurantId: number
+  date: string
+  time: string
+  guestNumber: number
+}
+
 export type TableListResponse = {
   tables: Table[]
 }
@@ -79,4 +86,10 @@ export type MenuListResponse = {
 // AvailableSlotsResponse represents the response for available reservation slots for a restaurant
 export type AvailableSlotsResponse = {
   slots: string[]
+}
+
+export type AvailableSlotsRequest = {
+  restaurantId: number
+  date: string
+  guestNumber: number
 }
