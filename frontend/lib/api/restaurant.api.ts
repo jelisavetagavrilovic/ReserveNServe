@@ -1,12 +1,10 @@
 import { apiRequest } from "@/lib/api/http-client"
 
-import {
-  mockAvailableSlots,
-  mockTables,
-} from "../mock-data"
 
 import type {
   AvailableSlotsResponse,
+  AvailableSlotsRequest,
+  AvailableTablesRequest,
   MenuItem,
   MenuListResponse,
   Restaurant,
@@ -16,22 +14,31 @@ import type {
   RestaurantQueryRequest,
   TableDetailsResponse,
   TableListResponse,
+  Table,
 } from "../types/restaurant.types"
 
 
-const RESTAURANTS_API_URL =
-  process.env.NEXT_PUBLIC_RESTAURANTS_API_URL
-
-
+const RESTAURANTS_API_URL = process.env.NEXT_PUBLIC_RESTAURANTS_API_URL
 if (!RESTAURANTS_API_URL) {
   throw new Error(
     "NEXT_PUBLIC_RESTAURANTS_API_URL environment variable is not configured."
   )
 }
 
+const RESERVATIONS_API_URL = process.env.NEXT_PUBLIC_RESERVATIONS_API_URL
+if (!RESERVATIONS_API_URL) {
+  throw new Error(
+    "NEXT_PUBLIC_RESERVATIONS_API_URL environment variable is not configured."
+  )
+}
+
 
 function restaurantsUrl(path = "") {
   return `${RESTAURANTS_API_URL}/api/Restaurants${path}`
+}
+
+function reservationsUrl(path = "") {
+  return `${RESERVATIONS_API_URL}/api/reservations${path}`
 }
 
 
@@ -134,54 +141,114 @@ export async function getRestaurantFilters():
 }
 
 
-/*
- * Temporary mock availability.
- *
- * These functions will be moved to the
- * Reservations API integration next.
- */
+type AvailableTableApiResponse = {
+  tableGroupId: number
+  location: string
+  capacity: number
+  availableTables: number
+}
+
 export async function getTablesByRestaurant(
-  restaurantId: number
+  request: AvailableTablesRequest
 ): Promise<TableListResponse> {
-  const tables =
-    mockTables.filter(
-      (table) =>
-        table.restaurantId === restaurantId
+  const params =
+    new URLSearchParams({
+      restaurantId:
+        String(request.restaurantId),
+
+      date:
+        request.date,
+
+      time:
+        request.time,
+
+      guestNumber:
+        String(request.guestNumber),
+    })
+
+
+  const response =
+    await apiRequest<
+      AvailableTableApiResponse[]
+    >(
+      `${reservationsUrl(
+        "/availability/tables"
+      )}?${params.toString()}`
     )
 
+
   return {
-    tables,
+    tables:
+      response.map(
+        (table) => ({
+          id: table.tableGroupId,
+          restaurantId:
+            request.restaurantId,
+
+          seats:
+            table.capacity,
+
+          location:
+            table.location,
+
+          availableNumber:
+            table.availableTables,
+        })
+      ),
   }
 }
 
 
 export async function getTableById(
   id: number
-): Promise<TableDetailsResponse | null> {
+): Promise<TableDetailsResponse> {
   const table =
-    mockTables.find(
-      (table) => table.id === id
+    await apiRequest<Table>(
+      restaurantsUrl(
+        `/GetTable/${id}`
+      )
     )
 
-  return table
-    ? { table }
-    : null
+  return {
+    table,
+  }
 }
 
 
-export type AvailableSlotsRequest = {
-  restaurantId: number
-  date: string
+type AvailableSlotApiResponse = {
+  time: string
 }
-
 
 export async function getAvailableSlots(
   request: AvailableSlotsRequest
 ): Promise<AvailableSlotsResponse> {
+  const params =
+    new URLSearchParams({
+      restaurantId:
+        String(request.restaurantId),
+
+      date:
+        request.date,
+
+      guestNumber:
+        String(request.guestNumber),
+    })
+
+
+  const response =
+    await apiRequest<
+      AvailableSlotApiResponse[]
+    >(
+      `${reservationsUrl(
+        "/availability/slots"
+      )}?${params.toString()}`
+    )
+
+
   return {
     slots:
-      mockAvailableSlots[
-        request.restaurantId
-      ] || [],
+      response.map(
+        (slot) => slot.time
+      ),
   }
 }

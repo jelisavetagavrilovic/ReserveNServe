@@ -1,14 +1,12 @@
-
 using Microsoft.EntityFrameworkCore;
 using Reservations.Application.Common.Pagination;
-using Reservations.Domain.ValueObjects;
 using Reservations.Application.DTOs.Requests;
 using Reservations.Application.Interfaces;
 using Reservations.Domain.Entities;
+using Reservations.Domain.ValueObjects;
 using Reservations.Infrastructure.DatabaseContext;
 
 namespace Reservations.Infrastructure.Repositories;
-
 
 public class ReservationRepository : IReservationRepository
 {
@@ -30,29 +28,29 @@ public class ReservationRepository : IReservationRepository
         Guid userId,
         ReservationQueryRequest query)
     {
+        var now = DateTime.UtcNow;
+
         var reservations = _context.Reservations
             .AsNoTracking()
             .Include(r => r.Orders)
-            .Where(r => r.UserId == userId);
+            .Where(r =>
+                r.UserId == userId &&
+                r.Status != ReservationStatus.Cancelled);
 
-        // Filter by reservation type
         if (query.Type.HasValue)
         {
             switch (query.Type.Value)
             {
                 case ReservationType.Upcoming:
-                    reservations = reservations.Where(r =>
-                        r.EndTime > DateTime.UtcNow);
+                    reservations = reservations.Where(r => r.EndTime > now);
                     break;
 
                 case ReservationType.Past:
-                    reservations = reservations.Where(r =>
-                        r.EndTime <= DateTime.UtcNow);
+                    reservations = reservations.Where(r => r.EndTime <= now);
                     break;
             }
         }
 
-        // Filter by reservation status
         if (query.Status.HasValue)
         {
             reservations = reservations.Where(r => r.Status == query.Status.Value);
@@ -60,8 +58,14 @@ public class ReservationRepository : IReservationRepository
 
         var totalCount = await reservations.CountAsync();
 
+        reservations = query.Type switch
+        {
+            ReservationType.Upcoming => reservations.OrderBy(r => r.StartTime),
+            ReservationType.Past => reservations.OrderByDescending(r => r.StartTime),
+            _ => reservations.OrderByDescending(r => r.StartTime)
+        };
+
         var items = await reservations
-            .OrderBy(r => r.StartTime)
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToListAsync();
@@ -89,27 +93,24 @@ public class ReservationRepository : IReservationRepository
 
     public async Task<bool> ExistsAsync(Guid id)
     {
-        return await _context.Reservations
-            .AnyAsync(r => r.Id == id);
+        return await _context.Reservations.AnyAsync(r => r.Id == id);
     }
-    
+
     public async Task<int> CountActiveReservationsAsync(
         int tableGroupId,
         DateTime startTime,
         DateTime endTime,
         Guid? reservationIdToIgnore = null)
     {
-        var query = _context.Reservations
-            .Where(r =>
-                r.TableGroupId == tableGroupId &&
-                r.Status == ReservationStatus.Confirmed &&
-                r.StartTime < endTime &&
-                r.EndTime > startTime);
+        var query = _context.Reservations.Where(r =>
+            r.TableGroupId == tableGroupId &&
+            r.Status == ReservationStatus.Confirmed &&
+            r.StartTime < endTime &&
+            r.EndTime > startTime);
 
         if (reservationIdToIgnore.HasValue)
         {
-            query = query.Where(
-                r => r.Id != reservationIdToIgnore.Value);
+            query = query.Where(r => r.Id != reservationIdToIgnore.Value);
         }
 
         return await query.CountAsync();
