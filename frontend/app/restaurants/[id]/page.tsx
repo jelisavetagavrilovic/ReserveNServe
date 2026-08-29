@@ -367,9 +367,10 @@ export default function RestaurantDetailPage() {
       {/* Hero */}
       <div className="relative h-[300px] md:h-[380px]">
         <Image
-          src={getImageSrc(restaurant.image)}
+          src={restaurant.image || "/placeholder.svg"}
           alt={restaurant.name}
           fill
+          unoptimized
           priority
           className="object-cover"
         />

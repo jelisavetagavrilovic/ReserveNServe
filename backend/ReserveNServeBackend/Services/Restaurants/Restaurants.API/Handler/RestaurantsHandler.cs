@@ -45,8 +45,8 @@ namespace Restaurants.API.Handler
                                 Rating = restaurant.rating,
                                 Price = restaurant.price,
                                 CuisineType = cuisineType,
-                                ReservationDuration =
-                                    restaurant.reservation_duration,
+                                ReservationDuration = restaurant.reservation_duration,
+                                Image = restaurant.image
                             };
 
                         restaurantDTOs =
@@ -119,12 +119,7 @@ namespace Restaurants.API.Handler
                 getRestaurantDTO.Price = restaurant.price;
                 getRestaurantDTO.CuisineType = cuisineType;
                 getRestaurantDTO.ReservationDuration = restaurant.reservation_duration;
-                getRestaurantDTO.Image =
-                    restaurant.image is { Length: > 0 }
-                        ? Convert.ToBase64String(
-                            restaurant.image
-                        )
-                        : null;
+                getRestaurantDTO.Image = restaurant.image;
             }
             catch (Exception e)
             {
