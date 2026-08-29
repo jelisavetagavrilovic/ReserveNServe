@@ -1,33 +1,107 @@
 using Reservations.Application.DTOs.External.Payment;
 using Reservations.Application.Interfaces;
 
+using Contracts =
+    ReserveNServe.Contracts.Payment;
+
 namespace Reservations.Infrastructure.Clients;
 
 public class PaymentClient : IPaymentClient
 {
-    public Task<CreatePaymentResponse> CreatePaymentAsync(
-        CreatePaymentRequest request)
+    private readonly Contracts
+        .PaymentsService
+        .PaymentsServiceClient _client;
+
+
+    public PaymentClient(
+        Contracts
+            .PaymentsService
+            .PaymentsServiceClient client)
     {
-        var response = new CreatePaymentResponse
-        {
-            ClientSecret =
-                $"temporary-client-secret-{Guid.NewGuid():N}",
-
-            Status = PaymentStatus.PaymentPending
-        };
-
-        return Task.FromResult(response);
+        _client = client;
     }
 
 
-    public Task<RefundPaymentResponse> RefundPaymentAsync(
-        RefundPaymentRequest request)
+    public async Task<CreatePaymentResponse>
+        CreatePaymentAsync(
+            CreatePaymentRequest request)
     {
-        var response = new RefundPaymentResponse
-        {
-            Status = PaymentStatus.RefundPending
-        };
+        var amountMinor =
+            decimal.ToInt64(
+                decimal.Round(
+                    request.Amount * 100m,
+                    0,
+                    MidpointRounding.AwayFromZero));
 
-        return Task.FromResult(response);
+
+        var response =
+            await _client.CreatePaymentAsync(
+                new Contracts
+                    .CreatePaymentGrpcRequest
+                {
+                    ReservationId = request.ReservationId.ToString(),
+                    AmountMinor = amountMinor,
+                    Currency = request.Currency
+                });
+
+
+        return new CreatePaymentResponse
+        {
+            ClientSecret = response.ClientSecret,
+            Status = MapStatus(response.Status)
+        };
+    }
+
+
+    public async Task<RefundPaymentResponse>
+        RefundPaymentAsync(
+            RefundPaymentRequest request)
+    {
+        var response =
+            await _client.RefundPaymentAsync(
+                new Contracts
+                    .RefundPaymentGrpcRequest
+                {
+                    ReservationId = request.ReservationId.ToString(),
+                    Reason = request.Reason ?? string.Empty
+                });
+
+
+        return new RefundPaymentResponse
+        {
+            Status = MapStatus(response.Status)
+        };
+    }
+
+
+    private static PaymentStatus MapStatus(
+        Contracts.PaymentStatus status)
+    {
+        return status switch
+        {
+            Contracts.PaymentStatus.PaymentPending =>
+                PaymentStatus.PaymentPending,
+
+            Contracts.PaymentStatus.PaymentSucceeded =>
+                PaymentStatus.PaymentSucceeded,
+
+            Contracts.PaymentStatus.PaymentFailed =>
+                PaymentStatus.PaymentFailed,
+
+            Contracts.PaymentStatus.RefundPending =>
+                PaymentStatus.RefundPending,
+
+            Contracts.PaymentStatus.RefundSucceeded =>
+                PaymentStatus.RefundSucceeded,
+
+            Contracts.PaymentStatus.RefundFailed =>
+                PaymentStatus.RefundFailed,
+
+            _ =>
+                throw new ArgumentOutOfRangeException(
+                    nameof(status),
+                    status,
+                    "Unsupported payment status.")
+        };
     }
 }

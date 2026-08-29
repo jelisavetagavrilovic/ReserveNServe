@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.3" />
+      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.11" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
 
       <PackageReference Include="Grpc.Net.Client" Version="2.83.0" />
@@ -16,6 +17,8 @@
       <PackageReference Include="Grpc.Tools" Version="2.83.0">
           <PrivateAssets>All</PrivateAssets>
       </PackageReference>
+
+      <PackageReference Include="RabbitMQ.Client" Version="7.2.2" />
     </ItemGroup>
 
     <ItemGroup>
@@ -24,8 +27,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Protobuf
-            Include="Protos/restaurants.proto" GrpcServices="Client" />
+        <Protobuf Include="Protos/restaurants.proto" GrpcServices="Client" />
+        <Protobuf Include="Protos/payment.proto" GrpcServices="Client" />
     </ItemGroup>
 
 </Project>

@@ -11,12 +11,11 @@ using Reservations.Infrastructure.Repositories;
 using Reservations.Infrastructure.Clients;
 using Reservations.API.Middleware;
 using System.Text.Json.Serialization;
-using Contracts = global::ReserveNServe.Contracts.Restaurants;
+using RestaurantContracts = global::ReserveNServe.Contracts.Restaurants;
+using PaymentContracts = global::ReserveNServe.Contracts.Payment;
+using Reservations.Infrastructure.Messaging;
 
 using DotNetEnv;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 Env.Load();
 
@@ -59,7 +58,7 @@ builder.Services.AddDbContext<ReservationsDbContext>(options =>
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
 
-builder.Services.AddGrpcClient<Contracts.RestaurantsService.RestaurantsServiceClient>(
+builder.Services.AddGrpcClient<RestaurantContracts.RestaurantsService.RestaurantsServiceClient>(
     options =>
     {
         options.Address =
@@ -67,8 +66,18 @@ builder.Services.AddGrpcClient<Contracts.RestaurantsService.RestaurantsServiceCl
                 builder.Configuration[
                     "GrpcServices:Restaurants"]!);
     });
+builder.Services
+    .AddGrpcClient<PaymentContracts.PaymentsService.PaymentsServiceClient>(
+        options =>
+        {
+            options.Address =
+                new Uri(
+                    builder.Configuration[
+                        "GrpcServices:Payment"]!);
+        });
 builder.Services.AddScoped<IRestaurantClient, RestaurantClient>();
 builder.Services.AddScoped<IPaymentClient, PaymentClient>();
+builder.Services.AddHostedService<PaymentStatusChangedConsumer>();
 builder.Services.AddScoped<INotificationClient, NotificationClient>();
 
 

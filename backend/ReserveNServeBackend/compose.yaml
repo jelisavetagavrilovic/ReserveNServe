@@ -205,13 +205,21 @@
 
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-      ASPNETCORE_URLS: "http://+:8080;https://+:8081"
-
+      ASPNETCORE_Kestrel__Endpoints__Http__Url: "http://+:8080"
+      ASPNETCORE_Kestrel__Endpoints__Http__Protocols: "Http1"
+      ASPNETCORE_Kestrel__Endpoints__Https__Url: "https://+:8081"
+      ASPNETCORE_Kestrel__Endpoints__Https__Protocols: "Http1AndHttp2"
+      ASPNETCORE_Kestrel__Endpoints__Grpc__Url: "http://+:8082"
+      ASPNETCORE_Kestrel__Endpoints__Grpc__Protocols: "Http2"
       ASPNETCORE_Kestrel__Certificates__Default__Path: /https/reservenserve.pfx
       ASPNETCORE_Kestrel__Certificates__Default__Password: ${ASPNETCORE_HTTPS_CERTIFICATE_PASSWORD}
 
       PAYMENT_STRIPE_SECRET_KEY: ${PAYMENT_STRIPE_SECRET_KEY}
       PAYMENT_STRIPE_WEBHOOK_SECRET: ${PAYMENT_STRIPE_WEBHOOK_SECRET}
+
+      RabbitMq__Host: ${PAYMENT_RABBITMQ_HOST:-rabbitmq}
+      RabbitMq__Username: ${PAYMENT_RABBITMQ_USERNAME:-guest}
+      RabbitMq__Password: ${PAYMENT_RABBITMQ_PASSWORD}
 
       ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=${PAYMENT_DB_NAME:-Payment};User Id=${PAYMENT_DB_USER:-payment_app};Password=${PAYMENT_DB_PASSWORD};TrustServerCertificate=True"
 
@@ -219,12 +227,17 @@
       - "${PAYMENT_HTTP_PORT:-5175}:8080"
       - "${PAYMENT_HTTPS_PORT:-7275}:8081"
 
+    expose:
+      - "8082"
+
     volumes:
       - "${ASPNET_HTTPS_PATH}:/https:ro"
 
     depends_on:
       payment-db-init:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
 
   payment-db-init:
     build:
@@ -280,6 +293,22 @@
 
     restart: "no"
 
+  stripe-listener:
+    image: stripe/stripe-cli:latest
+    container_name: reservenserve-stripe-listener
+    restart: unless-stopped
+    depends_on:
+      payment-api:
+        condition: service_started
+    command:
+      - listen
+      - --api-key
+      - ${PAYMENT_STRIPE_SECRET_KEY}
+      - --events
+      - payment_intent.succeeded,payment_intent.payment_failed,refund.created,refund.updated,refund.failed
+      - --forward-to
+      - http://payment-api:8080/api/PaymentWebhook/StripeWebhook
+
   reservations-db:
     image: postgres:${POSTGRES_VERSION:-17}
     container_name: reservenserve-reservations-db
@@ -313,7 +342,6 @@
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ASPNETCORE_URLS: "http://+:8080;https://+:8081"
-
       ASPNETCORE_Kestrel__Certificates__Default__Path: /https/reservenserve.pfx
       ASPNETCORE_Kestrel__Certificates__Default__Password: ${ASPNETCORE_HTTPS_CERTIFICATE_PASSWORD}
 
@@ -324,6 +352,11 @@
       DB_PASSWORD: ${DB_PASSWORD}
 
       GrpcServices__Restaurants: "http://restaurants-api:8082"
+      GrpcServices__Payment: "http://payment-api:8082"
+
+      RabbitMq__Host: ${RESERVATIONS_RABBITMQ_HOST:-rabbitmq}
+      RabbitMq__Username: ${RESERVATIONS_RABBITMQ_USERNAME:-guest}
+      RabbitMq__Password: ${RESERVATIONS_RABBITMQ_PASSWORD}
 
     ports:
       - "${RESERVATIONS_HTTP_PORT:-5040}:8080"
@@ -337,6 +370,10 @@
         condition: service_healthy
       restaurants-api:
         condition: service_started
+      payment-api:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
   frontend:
     build:
