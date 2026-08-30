@@ -150,6 +150,17 @@ public class Reservation
     /// Cancels the reservation.
     /// Refund processing is coordinated by the Application layer.
     /// </summary>
+    // public void Cancel()
+    // {
+    //     if (!CanBeCancelled())
+    //     {
+    //         throw new InvalidOperationException(
+    //             "Reservation cannot be cancelled.");
+    //     }
+    //
+    //     Status = ReservationStatus.Cancelled;
+    // }
+    
     public void Cancel()
     {
         if (Status != ReservationStatus.Confirmed)

@@ -159,12 +159,10 @@ export function MenuContent({
                       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
 
                         <Image
-                          src={
-                            getImageSrc(item.image) ||
-                            "/placeholder.svg"
-                          }
+                          src={item.image || "/placeholder.svg"}
                           alt={item.foodName}
                           fill
+                          unoptimized
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
                         />
 

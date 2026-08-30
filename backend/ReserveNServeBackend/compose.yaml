@@ -53,6 +53,9 @@
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Key: ${JWT_KEY}
 
       ConnectionStrings__IdentityDb: "Server=sqlserver,1433;Database=ReserveNServe.Identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
 
@@ -137,6 +140,7 @@
 
     volumes:
       - "${ASPNET_HTTPS_PATH}:/https:ro"
+      - ./Services/Restaurants/Restaurants.API/Images:/app/Images 
 
     depends_on:
       restaurants-db-init:
@@ -194,7 +198,7 @@
         fi
 
     restart: "no"
-
+    
     
   payment-api:
     build:
@@ -223,6 +227,10 @@
 
       ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=${PAYMENT_DB_NAME:-Payment};User Id=${PAYMENT_DB_USER:-payment_app};Password=${PAYMENT_DB_PASSWORD};TrustServerCertificate=True"
 
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Key: ${JWT_KEY}
+      
     ports:
       - "${PAYMENT_HTTP_PORT:-5175}:8080"
       - "${PAYMENT_HTTPS_PORT:-7275}:8081"
@@ -367,7 +375,7 @@
       - "${RESERVATIONS_HTTPS_PORT:-7294}:8081"
 
     volumes:
-      - ${HOME}/.aspnet/https:/https:ro
+      - "${ASPNET_HTTPS_PATH}:/https:ro"
 
     depends_on:
       reservations-db:

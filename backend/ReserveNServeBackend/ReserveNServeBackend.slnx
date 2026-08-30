@@ -7,13 +7,14 @@
         <Project Path="Services/Identity/Identity.API/Identity.API.csproj" />
     </Folder>
     <Folder Name="/Services/Restaurants/">
+        <Project Path="Restaurants.API.Tests/Restaurants.API.Tests.csproj" Id="48c168c7-946e-49ef-97d2-941b2c3a29a7" />
         <Project Path="Services/Restaurants/Restaurants.API/Restaurants.API.csproj" />
     </Folder>
     <Folder Name="/Services/Reservations/">
-    	<Project Path="Services/Reservations/Reservations.API/Reservations.API.csproj" />
-    	<Project Path="Services/Reservations/Reservations.Application/Reservations.Application.csproj" />
-    	<Project Path="Services/Reservations/Reservations.Domain/Reservations.Domain.csproj" />
-    	<Project Path="Services/Reservations/Reservations.Infrastructure/Reservations.Infrastructure.csproj" />
+        <Project Path="Services/Reservations/Reservations.API/Reservations.API.csproj" />
+        <Project Path="Services/Reservations/Reservations.Application/Reservations.Application.csproj" />
+        <Project Path="Services/Reservations/Reservations.Domain/Reservations.Domain.csproj" />
+        <Project Path="Services/Reservations/Reservations.Infrastructure/Reservations.Infrastructure.csproj" />
     </Folder>
     <Folder Name="/Services/Notifications/">
         <Project Path="Services/Notifications/Notifications.API/Notifications.API.csproj" />
