@@ -1,11 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Payment.API.DTO;
 using Payment.API.Handler;
+using Payment.API.Services;
 using Stripe;
-using Stripe.V2;
 using System.Diagnostics;
-using System.Reflection.Metadata;
 
 namespace Payment.API.Controllers
 {
@@ -13,10 +12,13 @@ namespace Payment.API.Controllers
     [Route("/api/[controller]")]
     public class PaymentController : ControllerBase
     {
-        private PaymentsHandler _paymentHandler;
-        public PaymentController(PaymentsHandler paymentHandler, IConfiguration configuration)
+        private readonly PaymentsHandler _paymentHandler;
+        private readonly IStripePaymentService _stripePaymentService;
+
+        public PaymentController(PaymentsHandler paymentHandler, IStripePaymentService stripePaymentService)
         {
             _paymentHandler = paymentHandler;
+            _stripePaymentService = stripePaymentService;
         }
 
         [HttpPost]
@@ -24,20 +26,21 @@ namespace Payment.API.Controllers
         [Route("CreatePaymentIntent")]
         public async Task<IActionResult> CreatePaymentIntent(CreatePaymentIntentRequest request)
         {
-            if(!_paymentHandler.IsReservationIdValid(request.ReservationId))
+            if (!_paymentHandler.IsReservationIdValid(request.ReservationId))
             {
                 return BadRequest("Invalid reservation ID. Reservation ID must be a non-empty string.");
             }
-            if(!_paymentHandler.IsAmountValid(request.Amount))
+
+            if (!_paymentHandler.IsAmountValid(request.Amount))
             {
                 return BadRequest("Invalid amount. Amount must be greater than zero.");
             }
 
             Entities.Payment existingPayment = await _paymentHandler.GetPaymentByReservationIdAsync(request.ReservationId);
-            if(existingPayment != null)
+
+            if (existingPayment != null)
             {
-                var service = new PaymentIntentService();
-                var paymentIntent = await service.GetAsync(existingPayment.payment_intent);
+                var paymentIntent = await _stripePaymentService.GetPaymentIntentAsync(existingPayment.payment_intent);
 
                 return Ok(new
                 {
@@ -50,7 +53,10 @@ namespace Payment.API.Controllers
             {
                 Amount = (long)Math.Round(request.Amount * 100, MidpointRounding.AwayFromZero),
                 Currency = request.Currency,
-                Metadata = new Dictionary<string, string> { { "reservationId", request.ReservationId } },
+                Metadata = new Dictionary<string, string>
+                {
+                    { "reservationId", request.ReservationId }
+                },
                 AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
                 {
                     Enabled = true,
@@ -60,10 +66,9 @@ namespace Payment.API.Controllers
 
             try
             {
-                var service = new PaymentIntentService();
-                var paymentIntent = await service.CreateAsync(options);
+                var paymentIntent = await _stripePaymentService.CreatePaymentIntentAsync(options);
 
-                Entities.Payment payment = new Entities.Payment
+                var payment = new Entities.Payment
                 {
                     reservation_id = request.ReservationId,
                     payment_intent = paymentIntent.Id,
@@ -96,20 +101,20 @@ namespace Payment.API.Controllers
         public async Task<IActionResult> Refund(RefundRequest request)
         {
             var payment = await _paymentHandler.GetPaymentByReservationIdAsync(request.ReservationId);
-            if(payment == null)
+
+            if (payment == null)
             {
                 return StatusCode(404, "Payment not found for the given reservation ID.");
             }
 
-            var refundService = new RefundService();
             var options = new RefundCreateOptions
             {
-                PaymentIntent = payment.payment_intent,
+                PaymentIntent = payment.payment_intent
             };
 
             try
             {
-                Refund refund = refundService.Create(options);
+                _stripePaymentService.CreateRefund(options);
             }
             catch (StripeException ex)
             {

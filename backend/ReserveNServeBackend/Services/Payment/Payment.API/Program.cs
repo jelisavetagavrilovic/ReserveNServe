@@ -6,6 +6,7 @@ using Payment.API.Grpc;
 using Payment.API.Handler;
 using Payment.API.Messaging;
 using Payment.API.Repositories;
+using Payment.API.Services;
 using Stripe;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -50,6 +51,7 @@ builder.Services.AddScoped<IPaymentsRepository, PaymentsRepository>();
 builder.Services.AddDbContext<PaymentsContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IPaymentStatusPublisher, RabbitMqPaymentStatusPublisher>();
+builder.Services.AddScoped<IStripePaymentService, StripePaymentService>();
 
 var app = builder.Build();
 
