@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Services/" />
     <Folder Name="/Services/Payment/">
+        <Project Path="Payment.API.Test/Payment.API.Test.csproj" Id="83475daf-812f-4bc2-8c94-df62be1381e9" />
         <Project Path="Services/Payment/Payment.API/Payment.API.csproj" />
     </Folder>
     <Folder Name="/Services/Identity/">
