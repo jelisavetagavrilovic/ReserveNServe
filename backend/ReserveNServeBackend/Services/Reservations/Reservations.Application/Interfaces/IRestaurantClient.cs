@@ -7,7 +7,9 @@ public interface IRestaurantClient
     Task<RestaurantInfoResponse?> GetRestaurantInfoAsync(
         int restaurantId);
 
-    Task<IReadOnlyList<MenuItemResponse>> GetMenuItemsAsync(
-        IEnumerable<int> menuItemIds);
+    Task<IReadOnlyList<MenuItemResponse>>
+        GetMenuItemsAsync(
+            int restaurantId,
+            IEnumerable<int> menuItemIds);
     
 }

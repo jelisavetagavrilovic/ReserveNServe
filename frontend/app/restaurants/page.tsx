@@ -65,11 +65,11 @@ export default function RestaurantsPage() {
       try {
         const response = await getRestaurants({
           search: params?.search ?? searchQuery,
-          cuisine_type: params?.cuisine_type ?? cuisineFilter,
+          cuisineType: params?.cuisineType ?? cuisineFilter,
           price: params?.price ?? priceFilter,
           sortBy: params?.sortBy ?? sortBy,
           page: params?.page ?? page,
-          pageSize: 4,
+          pageSize: 12,
         })
 
         setRestaurants(response.items)
@@ -137,7 +137,7 @@ export default function RestaurantsPage() {
 
       void handleSearch({
         search: "",
-        cuisine_type: "all",
+        cuisineType: "all",
         price: "all",
         sortBy,
         page: 1,
@@ -148,7 +148,7 @@ export default function RestaurantsPage() {
 
     void handleSearch({
       search: "",
-      cuisine_type: "all",
+      cuisineType: "all",
       price: "all",
       sortBy,
       page: 1,

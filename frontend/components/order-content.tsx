@@ -117,7 +117,7 @@ export function YourOrder({
                     <div className="flex items-center justify-between gap-3">
 
                       <p className="min-w-0 flex-1 truncate text-sm font-semibold">
-                        {item.food_name}
+                        {item.foodName}
                       </p>
 
                       <span className="shrink-0 text-sm font-semibold">
@@ -149,7 +149,7 @@ export function YourOrder({
                               item.quantity - 1
                             )
                           }
-                          aria-label={`Decrease ${item.food_name} quantity`}
+                          aria-label={`Decrease ${item.foodName} quantity`}
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
@@ -169,7 +169,7 @@ export function YourOrder({
                               item.quantity + 1
                             )
                           }
-                          aria-label={`Increase ${item.food_name} quantity`}
+                          aria-label={`Increase ${item.foodName} quantity`}
                         >
                           <Plus className="h-3 w-3" />
                         </Button>

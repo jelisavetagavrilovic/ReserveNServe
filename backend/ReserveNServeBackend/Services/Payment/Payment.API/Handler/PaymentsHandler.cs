@@ -1,145 +1,151 @@
 ﻿using Payment.API.Enums;
+using Payment.API.Messaging;
 using Payment.API.Repositories;
 using Stripe;
 
-namespace Payment.API.Handler
+namespace Payment.API.Handler;
+
+public class PaymentsHandler
 {
-    public class PaymentsHandler(IPaymentsRepository paymentsRepository)
+    private readonly IPaymentsRepository _paymentsRepository;
+    private readonly IPaymentStatusPublisher _paymentStatusPublisher;
+
+    public PaymentsHandler(
+        IPaymentsRepository paymentsRepository,
+        IPaymentStatusPublisher paymentStatusPublisher)
     {
-        private IPaymentsRepository _paymentsRepository = paymentsRepository;
+        _paymentsRepository = paymentsRepository;
+        _paymentStatusPublisher = paymentStatusPublisher;
+    }
 
-        public void InsertNewPaymentAsync(Entities.Payment payment)
+    public void InsertNewPaymentAsync(Entities.Payment payment)
+    {
+        try
         {
-            try
-            {
-                _paymentsRepository.InsertNewPayment(payment);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("An error occurred while inserting the payment.", ex);
-            }
+            _paymentsRepository.InsertNewPayment(payment);
         }
-
-
-        public async Task<Entities.Payment> GetPaymentByReservationIdAsync(string reservationId)
+        catch (Exception ex)
         {
-            var payment = await _paymentsRepository.GetPaymentByReservationId(reservationId);
-            return payment;
+            throw new Exception("An error occurred while inserting the payment.", ex);
         }
-        public async Task<Entities.Payment> GetPaymentByIntentIdAsync(string intent)
+    }
+
+    public async Task UpdatePaymentStatusAsync(int paymentId, PaymentStatus status)
+    {
+        await _paymentsRepository.UpdatePaymentStatus(paymentId, (int)status);
+    }
+
+    public async Task<Entities.Payment> GetPaymentByReservationIdAsync(string reservationId)
+    {
+        var payment = await _paymentsRepository.GetPaymentByReservationId(reservationId);
+        return payment;
+    }
+
+    public async Task<Entities.Payment> GetPaymentByIntentIdAsync(string intentId)
+    {
+        var payment = await _paymentsRepository.GetPaymentByIntentIdAsync(intentId);
+        return payment;
+    }
+
+    public bool IsAmountValid(decimal amount)
+    {
+        return amount > 0;
+    }
+    
+    public bool IsReservationIdValid(string reservationId)
+    {
+        return !string.IsNullOrWhiteSpace(reservationId);
+    }
+
+    public async Task HandleWebhookAsync(Event stripeEvent)
+    {
+        switch (stripeEvent.Type)
         {
-            var payment = await _paymentsRepository.GetPaymentByIntentIdAsync(intent);
-            return payment;
+            case EventTypes.PaymentIntentSucceeded:
+                await HandlePaymentSucceeded(stripeEvent);
+                break;
+
+            case EventTypes.PaymentIntentPaymentFailed:
+                await HandlePaymentFailed(stripeEvent);
+                break;
+
+            case EventTypes.RefundCreated:
+            case EventTypes.RefundUpdated:
+            case EventTypes.RefundFailed:
+                await HandleRefundChanged(stripeEvent);
+                break;
         }
+    }
 
+    private async Task HandlePaymentSucceeded(Event stripeEvent)
+    {
+        if (stripeEvent.Data.Object is not PaymentIntent paymentIntent) return;
+    
+        var payment = await GetPaymentByIntentIdAsync(paymentIntent.Id);
+        if (payment == null) return;
+    
+        var currentStatus = (PaymentStatus)payment.status;
+        if (currentStatus == PaymentStatus.PaymentSucceeded) return;
+    
+        if (currentStatus != PaymentStatus.PaymentPending &&
+            currentStatus != PaymentStatus.PaymentFailed)
+            return;
+    
+        await UpdatePaymentStatusAsync(payment.id, PaymentStatus.PaymentSucceeded);
+    
+        await _paymentStatusPublisher.PublishAsync(
+            payment.reservation_id,
+            PaymentStatus.PaymentSucceeded
+        );
+    }
 
-        public async Task HandleWebhookAsync(Event stripeEvent)
+    private async Task HandlePaymentFailed(Event stripeEvent)
+    {
+        if (stripeEvent.Data.Object is not PaymentIntent paymentIntent) return;
+    
+        var payment = await GetPaymentByIntentIdAsync(paymentIntent.Id);
+        if (payment == null) return;
+    
+        var currentStatus = (PaymentStatus)payment.status;
+        if (currentStatus == PaymentStatus.PaymentFailed) return;
+        if (currentStatus != PaymentStatus.PaymentPending) return;
+    
+        await UpdatePaymentStatusAsync(payment.id, PaymentStatus.PaymentFailed);
+    
+        await _paymentStatusPublisher.PublishAsync(
+            payment.reservation_id,
+            PaymentStatus.PaymentFailed
+        );
+    }
+
+    private async Task HandleRefundChanged(Event stripeEvent)
+    {
+        if (stripeEvent.Data.Object is not Refund refund)
+            return;
+
+        if (string.IsNullOrWhiteSpace(refund.PaymentIntentId))
+            return;
+
+        var payment = await GetPaymentByIntentIdAsync(refund.PaymentIntentId);
+
+        if (payment == null)
+            return;
+
+        var newStatus = refund.Status switch
         {
-            switch (stripeEvent.Type)
-            {
-                case EventTypes.PaymentIntentSucceeded:
-                    await HandlePaymentSucceeded(stripeEvent);
-                    break;
+            "succeeded" => PaymentStatus.RefundSucceeded,
+            "failed" => PaymentStatus.RefundFailed,
+            "canceled" => PaymentStatus.RefundFailed,
+            _ => PaymentStatus.RefundPending
+        };
 
-                case EventTypes.PaymentIntentPaymentFailed:
-                    await HandlePaymentFailed(stripeEvent);
-                    break;
-                case EventTypes.RefundCreated:
-                    await HandleRefundCreated(stripeEvent);
-                    break;
+        if (payment.status == (int)newStatus)
+            return;
 
-                case EventTypes.RefundFailed:
-                    await HandleRefundFailed(stripeEvent);
-                    break;
-            }
-        }
+        await UpdatePaymentStatusAsync(payment.id, newStatus);
 
-        public bool IsAmountValid(decimal amount)
-        {
-            return amount > 0;
-        }
-        public bool IsReservationIdValid(string reservationId)
-        {
-            return !string.IsNullOrWhiteSpace(reservationId);
-        }
-
-        private async Task HandlePaymentSucceeded(Event stripeEvent)
-        {
-            var paymentIntent = stripeEvent.Data.Object as PaymentIntent;
-            if (paymentIntent == null)
-                return;
-
-            var payment = await GetPaymentByIntentIdAsync(paymentIntent.Id);
-            if (payment == null)
-                return;
-
-            if (payment.status != (int)PaymentStatus.PaymentPending)
-                return;
-
-
-            await _paymentsRepository.UpdatePaymentStatus(payment.id, (int)PaymentStatus.PaymentSucceeded);
-
-            //TODO sent to reservationService {reservationId, newStatus}
-        }
-        private async Task HandlePaymentFailed(Event stripeEvent)
-        {
-            var paymentIntent = stripeEvent.Data.Object as PaymentIntent;
-            if (paymentIntent == null)
-                return;
-
-            var payment = await GetPaymentByIntentIdAsync(paymentIntent.Id);
-            if (payment == null)
-                return;
-
-            if (payment.status != (int)PaymentStatus.PaymentPending && payment.status != (int)PaymentStatus.PaymentFailed)
-                return;
-
-            await _paymentsRepository.UpdatePaymentStatus(payment.id, (int)PaymentStatus.PaymentFailed);
-
-            //TODO send to reservationService {reservationId, newStatus}
-        }
-
-        private async Task HandleRefundCreated(Event stripeEvent)
-        {
-            var refund = stripeEvent.Data.Object as Refund;
-            if (refund == null)
-                return;
-
-            var paymentIntentId = refund.PaymentIntentId;
-            if (string.IsNullOrEmpty(paymentIntentId))
-                return;
-
-            var payment = await GetPaymentByIntentIdAsync(paymentIntentId);
-            if (payment == null)
-                return;
-
-            if (payment.status != (int)PaymentStatus.RefundPending && payment.status != (int)PaymentStatus.PaymentSucceeded && payment.status != (int)PaymentStatus.RefundFailed)
-                return;
-
-            await _paymentsRepository.UpdatePaymentStatus(payment.id, (int)PaymentStatus.RefundSucceeded);
-
-            //TODO send to reservationService {reservationId, newStatus}
-        }
-        private async Task HandleRefundFailed(Event stripeEvent)
-        {
-            var refund = stripeEvent.Data.Object as Refund;
-            if (refund == null)
-                return;
-
-            var paymentIntentId = refund.PaymentIntentId;
-            if (string.IsNullOrEmpty(paymentIntentId))
-                return;
-
-            var payment = await GetPaymentByIntentIdAsync(paymentIntentId);
-            if (payment == null)
-                return;
-
-            if (payment.status != (int)PaymentStatus.RefundPending)
-                return;
-
-            await _paymentsRepository.UpdatePaymentStatus(payment.id, (int)PaymentStatus.RefundFailed);
-
-            //TODO send to reservationService {reservationId, newStatus}
-        }
+        await _paymentStatusPublisher.PublishAsync(
+            payment.reservation_id,
+            newStatus);
     }
 }

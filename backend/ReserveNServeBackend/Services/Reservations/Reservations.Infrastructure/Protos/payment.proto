@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+option csharp_namespace = "ReserveNServe.Contracts.Payment";
+
+package payment;
+
+service PaymentsService {
+  rpc CreatePayment (CreatePaymentGrpcRequest)
+      returns (CreatePaymentGrpcReply);
+
+  rpc RefundPayment (RefundPaymentGrpcRequest)
+      returns (RefundPaymentGrpcReply);
+}
+
+message CreatePaymentGrpcRequest {
+  string reservation_id = 1;
+  int64 amount_minor = 2;
+  string currency = 3;
+}
+
+message CreatePaymentGrpcReply {
+  string client_secret = 1;
+  PaymentStatus status = 2;
+}
+
+message RefundPaymentGrpcRequest {
+  string reservation_id = 1;
+  string reason = 2;
+}
+
+message RefundPaymentGrpcReply {
+  PaymentStatus status = 1;
+}
+
+enum PaymentStatus {
+  PAYMENT_PENDING = 0;
+  PAYMENT_SUCCEEDED = 1;
+  PAYMENT_FAILED = 2;
+  REFUND_PENDING = 3;
+  REFUND_SUCCEEDED = 4;
+  REFUND_FAILED = 5;
+}

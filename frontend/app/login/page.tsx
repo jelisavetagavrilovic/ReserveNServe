@@ -1,15 +1,18 @@
 "use client"
 
-import {
-  type FormEvent,
-  useState,
-} from "react"
-
+import { type FormEvent, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-import { authService } from "@/auth/services/auth.service"
+import {
+  AlertCircle,
+  Loader2,
+  Lock,
+  LogIn,
+  Mail,
+} from "lucide-react"
 
+import { authService } from "@/auth/services/auth.service"
 import {
   clearRedirectUrl,
   getRedirectUrl,
@@ -26,13 +29,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-import {
-  AlertCircle,
-  Loader2,
-  Lock,
-  LogIn,
-  Mail,
-} from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -42,9 +38,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     setIsLoading(true)
@@ -59,18 +53,14 @@ export default function LoginPage() {
       const redirect = getRedirectUrl()
 
       clearRedirectUrl()
-
-      router.push(
-        redirect || "/"
-      )
+      router.push(redirect || "/")
     } catch (error) {
-      console.error(
-        "Login failed:",
-        error
-      )
+      console.error("Login failed:", error)
 
       setError(
-        "Unable to sign in. Please check your email and password and try again."
+        error instanceof Error
+          ? error.message
+          : "Unable to sign in."
       )
     } finally {
       setIsLoading(false)
@@ -79,24 +69,25 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-[calc(100svh-4rem)] bg-muted/20">
-      <div className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-md items-center px-4 py-5 sm:px-6">
+      <div className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-md items-center px-4 py-6 sm:px-6">
         <Card className="w-full overflow-hidden rounded-2xl border shadow-sm">
-          <CardHeader className="pb-3 text-center">
+          <CardHeader className="items-center space-y-3 pb-4 text-center">
+            <div className="space-y-1">
+              <CardTitle className="text-2xl font-bold tracking-tight">
+                Welcome Back
+              </CardTitle>
 
-            <CardTitle className="text-2xl font-bold tracking-tight">
-              Welcome Back
-            </CardTitle>
-
-            <p className="mt-1 text-sm text-muted-foreground">
-              Sign in to continue with your reservations
-            </p>
+              <p className="text-sm text-muted-foreground">
+                Sign in to continue with your reservations
+              </p>
+            </div>
           </CardHeader>
 
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-3 pb-2">
+            <CardContent className="space-y-4">
               {error && (
-                <div className="flex items-start gap-2 rounded-xl bg-destructive/5 p-3">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
 
                   <p className="text-sm text-destructive">
                     {error}
@@ -119,9 +110,7 @@ export default function LoginPage() {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(event) => {
-                      setEmail(
-                        event.target.value
-                      )
+                      setEmail(event.target.value)
 
                       if (error) {
                         setError("")
@@ -135,9 +124,18 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="password">
-                  Password
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">
+                    Password
+                  </Label>
+
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
 
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -149,9 +147,7 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(event) => {
-                      setPassword(
-                        event.target.value
-                      )
+                      setPassword(event.target.value)
 
                       if (error) {
                         setError("")
@@ -163,17 +159,9 @@ export default function LoginPage() {
                   />
                 </div>
               </div>
-              <div className="flex justify-center">
-                <Link
-                  href="/forgot-password"
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
             </CardContent>
 
-            <CardFooter className="flex flex-col gap-3 pt-2">
+            <CardFooter className="flex flex-col gap-3 pt-5">
               <Button
                 type="submit"
                 className="w-full rounded-xl"

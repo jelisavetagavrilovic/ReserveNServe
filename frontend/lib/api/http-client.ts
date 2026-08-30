@@ -1,3 +1,39 @@
+type ApiErrorResponse = {
+  message?: string
+  detail?: string
+  title?: string
+  errors?: Record<string, string[]>
+}
+
+
+function getErrorMessage(
+  problem: ApiErrorResponse,
+  fallback: string
+): string {
+  if (problem.message) {
+    return problem.message
+  }
+
+  if (problem.detail) {
+    return problem.detail
+  }
+
+  if (problem.errors) {
+    const messages = Object.values(problem.errors).flat()
+
+    if (messages.length > 0) {
+      return messages[0]
+    }
+  }
+
+  if (problem.title) {
+    return problem.title
+  }
+
+  return fallback
+}
+
+
 export async function apiRequest<T>(
   url: string,
   options?: RequestInit
@@ -13,17 +49,19 @@ export async function apiRequest<T>(
   })
 
   if (!response.ok) {
-    let message = `Request failed with status ${response.status}`
+    const fallback = `Request failed with status ${response.status}`
+    let message = fallback
 
     try {
-      const problem = await response.json()
+      const problem =
+        (await response.json()) as ApiErrorResponse
 
-      message =
-        problem.detail ??
-        problem.title ??
-        message
+      message = getErrorMessage(
+        problem,
+        fallback
+      )
     } catch {
-      // Response does not contain JSON ProblemDetails.
+      // Response does not contain JSON.
     }
 
     throw new Error(message)

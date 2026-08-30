@@ -14,6 +14,6 @@
         public string price { get; set; }
         public int cuisine_type { get; set; }
         public int reservation_duration { get; set; }
-        public byte[]? image { get; set; }
+        public string? image { get; set; }
     }
 }

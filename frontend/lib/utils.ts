@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // image
-export function getImageSrc(image?: string) {
+export function getImageSrc(image?: string | null) {
   if (!image) return "/placeholder.svg"
 
   if (image.startsWith("data:image")) {
