@@ -19,6 +19,7 @@ using System.Text.Json.Serialization;
 using RestaurantContracts = global::ReserveNServe.Contracts.Restaurants;
 using PaymentContracts = global::ReserveNServe.Contracts.Payment;
 using Reservations.Infrastructure.Messaging;
+using MassTransit;
 
 using DotNetEnv;
 
@@ -106,6 +107,19 @@ builder.Services.AddScoped<IRestaurantClient, RestaurantClient>();
 builder.Services.AddScoped<IPaymentClient, PaymentClient>();
 builder.Services.AddHostedService<PaymentStatusChangedConsumer>();
 builder.Services.AddScoped<INotificationClient, NotificationClient>();
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        var rabbit = builder.Configuration.GetSection("RabbitMq");
+
+        cfg.Host(rabbit["Host"] ?? "rabbitmq", h =>
+        {
+            h.Username(rabbit["Username"] ?? "guest");
+            h.Password(rabbit["Password"]!);
+        });
+    });
+});
 
 
 var app = builder.Build();

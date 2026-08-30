@@ -483,6 +483,7 @@ public class ReservationService : IReservationService
     public async Task<ReservationResponse>
         CreateReservationAsync(
             Guid userId,
+            string contactEmail,
             CreateReservationRequest request)
     {
         var restaurant =
@@ -521,6 +522,7 @@ public class ReservationService : IReservationService
         var reservation =
             new Reservation(
                 userId,
+                contactEmail,
                 request.RestaurantId,
                 request.TableGroupId,
                 startTime,
@@ -536,13 +538,31 @@ public class ReservationService : IReservationService
         reservation.SetOrders(
             orders);
 
-        await _reservationRepository.AddAsync(
-            reservation);
+        await _reservationRepository.AddAsync(reservation);
 
-        return MapToResponse(
-            reservation,
-            restaurant,
-            tableGroup);
+        var response = MapToResponse(reservation, restaurant, tableGroup);
+
+        await _notificationClient.SendReservationConfirmedAsync(
+            new ReservationConfirmedNotification(
+                reservation.Id,
+                contactEmail,
+                response.RestaurantName,
+                response.RestaurantAddress,
+                response.RestaurantCity,
+                response.Date,
+                response.StartTime,
+                response.GuestNumber,
+                response.TableLocation,
+                response.ServingTime,
+                response.TotalAmount,
+                response.Orders.Select(o =>
+                    new ReservationNotificationOrderItem(
+                        o.FoodName,
+                        o.Price,
+                        o.Quantity,
+                        o.Total)).ToList()));
+
+        return response;
     }
 
     public async Task<ReservationResponse>

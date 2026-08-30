@@ -9,6 +9,7 @@ public interface IReservationService
 {
     Task<ReservationResponse> CreateReservationAsync(
         Guid userId,
+        string contactEmail,
         CreateReservationRequest request);
 
     Task<ReservationResponse> GetReservationByIdAsync(

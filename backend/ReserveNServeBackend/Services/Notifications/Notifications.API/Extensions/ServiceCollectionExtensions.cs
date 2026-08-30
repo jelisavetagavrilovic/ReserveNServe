@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
             x.AddConsumer<UserRegisteredConsumer>();
             x.AddConsumer<PasswordResetRequestedConsumer>();
             x.AddConsumer<OwnerRequestApprovedConsumer>();
+            x.AddConsumer<ReservationConfirmedConsumer>();
 
             x.UsingRabbitMq((context, cfg) =>
             {
