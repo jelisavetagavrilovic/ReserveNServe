@@ -69,7 +69,7 @@ export default function RestaurantsPage() {
           price: params?.price ?? priceFilter,
           sortBy: params?.sortBy ?? sortBy,
           page: params?.page ?? page,
-          pageSize: 4,
+          pageSize: 12,
         })
 
         setRestaurants(response.items)

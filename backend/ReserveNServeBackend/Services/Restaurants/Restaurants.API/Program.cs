@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileProviders;
 using Restaurants.API.Data;
 using Restaurants.API.Handler;
 using Restaurants.API.Repositories;
@@ -43,10 +44,27 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "Images/RestaurantImages")),
+    RequestPath = "/restaurantImage"
+});
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "Images/MenuItemImages")),
+    RequestPath = "/menuItemImage"
+});
+
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
 
 app.UseCors("Frontend");
 

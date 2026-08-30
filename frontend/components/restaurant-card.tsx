@@ -32,12 +32,10 @@ export function RestaurantCard({
         {/* Image */}
         <div className="relative h-48 overflow-hidden">
           <Image
-            src={
-              getImageSrc(restaurant.image) ||
-              "/placeholder.svg"
-            }
+            src={restaurant.image || "/placeholder.svg"}
             alt={restaurant.name}
             fill
+            unoptimized
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
 

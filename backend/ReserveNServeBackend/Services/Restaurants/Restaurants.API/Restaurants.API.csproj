@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Images\MenuItemImages\" />
     <Protobuf Include="Protos/restaurants.proto" GrpcServices="Server" />
   </ItemGroup>
 

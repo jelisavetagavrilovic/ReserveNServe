@@ -113,12 +113,10 @@ export function MenuPreview({
                       >
                         <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-muted">
                           <Image
-                            src={
-                              getImageSrc(item.image) ||
-                              "/placeholder.svg"
-                            }
+                            src={item.image || "/placeholder.svg"}
                             alt={item.foodName}
                             fill
+                            unoptimized
                             className="object-cover"
                           />
                         </div>

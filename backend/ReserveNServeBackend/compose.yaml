@@ -137,6 +137,7 @@
 
     volumes:
       - "${ASPNET_HTTPS_PATH}:/https:ro"
+      - ./Services/Restaurants/Restaurants.API/Images:/app/Images 
 
     depends_on:
       restaurants-db-init:

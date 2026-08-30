@@ -137,7 +137,10 @@ export async function getRestaurantFilters():
     restaurantsUrl(
       "/GetRestaurantsFilters"
     )
-  )
+
+  return {
+    restaurant,
+  }
 }
 
 
@@ -218,6 +221,7 @@ export async function getTableById(
 type AvailableSlotApiResponse = {
   time: string
 }
+
 
 export async function getAvailableSlots(
   request: AvailableSlotsRequest
