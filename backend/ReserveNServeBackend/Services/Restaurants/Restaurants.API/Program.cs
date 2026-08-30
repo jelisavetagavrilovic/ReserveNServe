@@ -44,8 +44,15 @@ if (app.Environment.IsDevelopment())
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "Images")),
-    RequestPath = "/images"
+        Path.Combine(builder.Environment.ContentRootPath, "Images/RestaurantImages")),
+    RequestPath = "/restaurantImage"
+});
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "Images/MenuItemImages")),
+    RequestPath = "/menuItemImage"
 });
 
 app.UseHttpsRedirection();
