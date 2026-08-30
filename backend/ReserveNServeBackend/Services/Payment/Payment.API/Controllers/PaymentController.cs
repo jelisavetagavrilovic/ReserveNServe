@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Payment.API.DTO;
 using Payment.API.Handler;
 using Stripe;
@@ -19,6 +20,7 @@ namespace Payment.API.Controllers
         }
 
         [HttpPost]
+        [Authorize]
         [Route("CreatePaymentIntent")]
         public async Task<IActionResult> CreatePaymentIntent(CreatePaymentIntentRequest request)
         {
@@ -89,6 +91,7 @@ namespace Payment.API.Controllers
         }
 
         [HttpPost]
+        [Authorize]
         [Route("Refund")]
         public async Task<IActionResult> Refund(RefundRequest request)
         {
