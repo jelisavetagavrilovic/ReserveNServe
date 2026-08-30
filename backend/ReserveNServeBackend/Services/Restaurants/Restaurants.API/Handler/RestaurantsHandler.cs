@@ -165,8 +165,6 @@ namespace Restaurants.API.Handler
                     }
                 }
 
-                var cuisine_type = await GetCuisineTypeName(restaurant.cuisine_type);
-
                 restaurantInfoResponse.RestaurantName = restaurant.name;
                 restaurantInfoResponse.RestaurantAddress = restaurant.address;
                 restaurantInfoResponse.RestaurantCity = restaurant.city;
