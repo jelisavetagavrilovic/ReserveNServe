@@ -198,7 +198,7 @@
         fi
 
     restart: "no"
-
+    
     
   payment-api:
     build:
@@ -227,6 +227,10 @@
 
       ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=${PAYMENT_DB_NAME:-Payment};User Id=${PAYMENT_DB_USER:-payment_app};Password=${PAYMENT_DB_PASSWORD};TrustServerCertificate=True"
 
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Key: ${JWT_KEY}
+      
     ports:
       - "${PAYMENT_HTTP_PORT:-5175}:8080"
       - "${PAYMENT_HTTPS_PORT:-7275}:8081"
