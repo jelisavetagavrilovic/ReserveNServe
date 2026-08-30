@@ -358,6 +358,10 @@
       RabbitMq__Username: ${RESERVATIONS_RABBITMQ_USERNAME:-guest}
       RabbitMq__Password: ${RESERVATIONS_RABBITMQ_PASSWORD}
 
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Key: ${JWT_KEY}
+
     ports:
       - "${RESERVATIONS_HTTP_PORT:-5040}:8080"
       - "${RESERVATIONS_HTTPS_PORT:-7294}:8081"
