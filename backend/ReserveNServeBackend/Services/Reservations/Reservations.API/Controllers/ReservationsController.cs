@@ -38,11 +38,10 @@ public class ReservationsController : ControllerBase
             [FromBody] CreateReservationRequest request)
     {
         var userId = GetCurrentUserId();
+        var email = GetCurrentUserEmail();
 
-        var result =
-            await _reservationService.CreateReservationAsync(
-                userId,
-                request);
+        var result = await _reservationService.CreateReservationAsync(
+            userId, email, request);
 
         return CreatedAtAction(
             nameof(GetReservation),
@@ -214,11 +213,8 @@ public class ReservationsController : ControllerBase
 
 
     /// <summary>
-    /// Returns the currently authenticated user ID.
-    ///
-    /// Development implementation only.
-    /// This will later be replaced with the authenticated user's
-    /// ID from JWT claims.
+    /// Returns the ID of the currently authenticated user
+    /// from the JWT claim.
     /// </summary>
     private Guid GetCurrentUserId()
     {
@@ -228,5 +224,19 @@ public class ReservationsController : ControllerBase
             throw new UnauthorizedAccessException("Authenticated user ID is missing or invalid.");
 
         return userId;
+    }
+    
+    /// <summary>
+    /// Returns the email address of the currently authenticated user
+    /// from the JWT email claim.
+    /// </summary>
+    private string GetCurrentUserEmail()
+    {
+        var email = User.FindFirst(JwtRegisteredClaimNames.Email)?.Value;
+
+        if (string.IsNullOrWhiteSpace(email))
+            throw new UnauthorizedAccessException("Authenticated user email is missing.");
+
+        return email;
     }
 }

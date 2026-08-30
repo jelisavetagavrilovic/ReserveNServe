@@ -18,7 +18,7 @@
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 20s
+      start_period: 120s
 
   rabbitmq:
     image: rabbitmq:4-management
@@ -36,7 +36,7 @@
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 10s
+      start_period: 120s
 
   mailpit:
     image: axllent/mailpit:latest
@@ -342,8 +342,8 @@
 
   reservations-api:
     build:
-      context: ./Services/Reservations
-      dockerfile: Reservations.API/Dockerfile
+      context: .
+      dockerfile: Services/Reservations/Reservations.API/Dockerfile
 
     container_name: reservenserve-reservations
 

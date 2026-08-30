@@ -7,13 +7,18 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Reservations.API/Reservations.API.csproj", "Reservations.API/"]
-COPY ["Reservations.Application/Reservations.Application.csproj", "Reservations.Application/"]
-COPY ["Reservations.Domain/Reservations.Domain.csproj", "Reservations.Domain/"]
-COPY ["Reservations.Infrastructure/Reservations.Infrastructure.csproj", "Reservations.Infrastructure/"]
-RUN dotnet restore "Reservations.API/Reservations.API.csproj"
+
+COPY ["Services/Reservations/Reservations.API/Reservations.API.csproj", "Services/Reservations/Reservations.API/"]
+COPY ["Services/Reservations/Reservations.Application/Reservations.Application.csproj", "Services/Reservations/Reservations.Application/"]
+COPY ["Services/Reservations/Reservations.Domain/Reservations.Domain.csproj", "Services/Reservations/Reservations.Domain/"]
+COPY ["Services/Reservations/Reservations.Infrastructure/Reservations.Infrastructure.csproj", "Services/Reservations/Reservations.Infrastructure/"]
+COPY ["BuildingBlocks/Contracts/Contracts.csproj", "BuildingBlocks/Contracts/"]
+
+RUN dotnet restore "Services/Reservations/Reservations.API/Reservations.API.csproj"
+
 COPY . .
-WORKDIR "/src/Reservations.API"
+
+WORKDIR "/src/Services/Reservations/Reservations.API"
 RUN dotnet build "./Reservations.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
