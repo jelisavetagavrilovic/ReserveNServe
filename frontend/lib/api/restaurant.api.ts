@@ -137,7 +137,10 @@ export async function getRestaurantFilters():
     restaurantsUrl(
       "/GetRestaurantsFilters"
     )
-  )
+
+  return {
+    restaurant,
+  }
 }
 
 
