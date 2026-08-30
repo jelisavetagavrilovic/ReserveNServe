@@ -106,6 +106,7 @@ public class ReservationService : IReservationService
     }
 
     private async Task<List<Order>> BuildOrdersAsync(
+        int restaurantId,
         IEnumerable<OrderRequest>? requests)
     {
         var requestList =
@@ -127,6 +128,7 @@ public class ReservationService : IReservationService
 
         var menuItems =
             await _restaurantClient.GetMenuItemsAsync(
+                restaurantId,
                 requestList.Select(
                     request => request.MenuItemId));
 
@@ -226,13 +228,53 @@ public class ReservationService : IReservationService
         DateTime startTime,
         DateTime endTime)
     {
-        var openingDateTime =
-            startTime.Date.Add(
-                restaurant.OpeningTime.ToTimeSpan());
+        var openingTime =
+            restaurant.OpeningTime.ToTimeSpan();
 
-        var closingDateTime =
-            startTime.Date.Add(
-                restaurant.ClosingTime.ToTimeSpan());
+        var closingTime =
+            restaurant.ClosingTime.ToTimeSpan();
+
+        DateTime openingDateTime;
+        DateTime closingDateTime;
+
+        // Restaurant closes after midnight.
+        // Example: 09:00 -> 03:00.
+        if (closingTime <= openingTime)
+        {
+            // 00:00 - 03:00 belongs to the previous day's
+            // restaurant working period.
+            if (startTime.TimeOfDay <= closingTime)
+            {
+                openingDateTime =
+                    startTime.Date
+                        .AddDays(-1)
+                        .Add(openingTime);
+
+                closingDateTime =
+                    startTime.Date
+                        .Add(closingTime);
+            }
+            else
+            {
+                openingDateTime =
+                    startTime.Date
+                        .Add(openingTime);
+
+                closingDateTime =
+                    startTime.Date
+                        .AddDays(1)
+                        .Add(closingTime);
+            }
+        }
+        else
+        {
+            // Normal working hours, e.g. 09:00 -> 23:00.
+            openingDateTime =
+                startTime.Date.Add(openingTime);
+
+            closingDateTime =
+                startTime.Date.Add(closingTime);
+        }
 
         if (startTime < openingDateTime)
         {
@@ -256,29 +298,79 @@ public class ReservationService : IReservationService
     public async Task<List<AvailableSlotResponse>>
         GetAvailableSlotsAsync(
             int restaurantId,
-            DateOnly date)
+            DateOnly date,
+            int guestNumber)
     {
+        if (guestNumber <= 0)
+        {
+            throw new InvalidOperationException(
+                "Guest number must be greater than zero.");
+        }
+
         var restaurant =
             await GetRestaurantInfoAsync(
                 restaurantId);
 
-        var slots =
-            new List<AvailableSlotResponse>();
+        var slots = new List<AvailableSlotResponse>();
 
         var current =
-            date.ToDateTime(
-                restaurant.OpeningTime);
+            DateTime.SpecifyKind(
+                date.ToDateTime(
+                    restaurant.OpeningTime),
+                DateTimeKind.Utc);
 
         var closing =
-            date.ToDateTime(
-                restaurant.ClosingTime);
+            DateTime.SpecifyKind(
+                date.ToDateTime(
+                    restaurant.ClosingTime),
+                DateTimeKind.Utc);
+
+        // Restaurant closes after midnight.
+        if (restaurant.ClosingTime <=
+            restaurant.OpeningTime)
+        {
+            closing = closing.AddDays(1);
+        }
+
+
+        // Current local time of the restaurant.
+        // For now all restaurants are in Serbia.
+        var serbiaTimeZone =
+            TimeZoneInfo.FindSystemTimeZoneById(
+                "Europe/Belgrade");
+
+        var now =
+            TimeZoneInfo.ConvertTimeFromUtc(
+                DateTime.UtcNow,
+                serbiaTimeZone);
+
+
+        // If reservation is for today,
+        // start from the next 30-minute slot.
+        if (date == DateOnly.FromDateTime(now))
+        {
+            var nextSlot =
+                now.Date
+                    .AddHours(now.Hour)
+                    .AddMinutes(
+                        ((now.Minute / 30) + 1) * 30);
+
+            var nextSlotUtc =
+                DateTime.SpecifyKind(
+                    nextSlot,
+                    DateTimeKind.Utc);
+
+            if (nextSlotUtc > current)
+            {
+                current = nextSlotUtc;
+            }
+        }
 
         while (
             current
                 .AddMinutes(
                     restaurant.ReservationDurationMinutes)
-            <= closing
-        )
+            <= closing)
         {
             var end =
                 current.AddMinutes(
@@ -288,6 +380,13 @@ public class ReservationService : IReservationService
 
             foreach (var tableGroup in restaurant.TableGroups)
             {
+                // Skip table groups that cannot fit
+                // the requested number of guests.
+                if (tableGroup.Capacity < guestNumber)
+                {
+                    continue;
+                }
+
                 var reservedTables =
                     await _reservationRepository
                         .CountActiveReservationsAsync(
@@ -324,19 +423,28 @@ public class ReservationService : IReservationService
         GetAvailableTablesAsync(
             int restaurantId,
             DateOnly date,
-            TimeOnly time)
+            TimeOnly time,
+            int guestNumber)
     {
+        if (guestNumber <= 0)
+        {
+            throw new InvalidOperationException(
+                "Guest number must be greater than zero.");
+        }
+
         var restaurant =
             await GetRestaurantInfoAsync(
                 restaurantId);
 
         var startTime =
-            date.ToDateTime(time);
+            DateTime.SpecifyKind(
+                date.ToDateTime(time),
+                DateTimeKind.Utc);
 
         var endTime =
             startTime.AddMinutes(
                 restaurant.ReservationDurationMinutes);
-        
+
         ValidateWorkingHours(
             restaurant,
             startTime,
@@ -355,7 +463,8 @@ public class ReservationService : IReservationService
                         endTime);
 
             var available =
-                tableGroup.TableCount - reservedTables;
+                tableGroup.TableCount -
+                reservedTables;
 
             availableTables.Add(
                 new AvailableTableResponse
@@ -421,6 +530,7 @@ public class ReservationService : IReservationService
 
         var orders =
             await BuildOrdersAsync(
+                request.RestaurantId,
                 request.Orders);
 
         reservation.SetOrders(
@@ -574,6 +684,7 @@ public class ReservationService : IReservationService
 
         var orders =
             await BuildOrdersAsync(
+                reservation.RestaurantId,
                 request.Orders);
 
         reservation.SetOrders(

@@ -94,7 +94,7 @@ export function BookingCard({
     reservation.orders ?? []
 
   return (
-    <Card className="overflow-hidden rounded-2xl border shadow-sm">
+    <Card className="gap-0 overflow-hidden rounded-2xl py-0 border shadow-sm">
       <CardHeader className="px-5 pb-3 pt-5 sm:px-6">
         <CardTitle className="text-lg">
           {reservation.restaurantName}

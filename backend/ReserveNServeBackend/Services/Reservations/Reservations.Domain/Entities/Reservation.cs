@@ -150,14 +150,31 @@ public class Reservation
     /// Cancels the reservation.
     /// Refund processing is coordinated by the Application layer.
     /// </summary>
+    // public void Cancel()
+    // {
+    //     if (!CanBeCancelled())
+    //     {
+    //         throw new InvalidOperationException(
+    //             "Reservation cannot be cancelled.");
+    //     }
+    //
+    //     Status = ReservationStatus.Cancelled;
+    // }
+    
     public void Cancel()
     {
-        if (!CanBeCancelled())
-        {
-            throw new InvalidOperationException(
-                "Reservation cannot be cancelled.");
-        }
-
+        if (Status != ReservationStatus.Confirmed)
+            throw new InvalidOperationException($"Reservation cannot be cancelled because its status is {Status}.");
+    
+        if (StartTime <= DateTime.UtcNow)
+            throw new InvalidOperationException($"Reservation cannot be cancelled because it has already started. StartTime={StartTime:O}, UtcNow={DateTime.UtcNow:O}");
+    
+        if (PaymentStatus == ReservationPaymentStatus.Pending)
+            throw new InvalidOperationException("Reservation cannot be cancelled while payment is pending.");
+    
+        if (PaymentStatus == ReservationPaymentStatus.RefundPending)
+            throw new InvalidOperationException("Reservation cannot be cancelled while refund is pending.");
+    
         Status = ReservationStatus.Cancelled;
     }
 

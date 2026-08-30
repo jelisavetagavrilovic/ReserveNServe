@@ -42,8 +42,14 @@ import {
   getAvailableSlots,
 } from "@/lib/services/restaurant.service"
 
-import { createReservation } from "@/lib/services/reservation.service"
-import { cn, getImageSrc } from "@/lib/utils"
+import {
+  createReservation,
+} from "@/lib/services/reservation.service"
+
+import {
+  cn,
+  getImageSrc,
+} from "@/lib/utils"
 
 import type {
   MenuItem,
@@ -67,10 +73,13 @@ import {
   UtensilsCrossed,
 } from "lucide-react"
 
+
 export default function RestaurantDetailPage() {
   const router = useRouter()
   const params = useParams()
+
   const id = Number(params.id)
+
 
   const {
     selectedTable,
@@ -80,7 +89,10 @@ export default function RestaurantDetailPage() {
     setCurrentReservationResponse,
   } = useAppStore()
 
-  const { isAuthenticated } = useAuth()
+
+  const { isAuthenticated } =
+    useAuth()
+
 
   const [restaurant, setRestaurant] =
     useState<Restaurant | null>(null)
@@ -97,23 +109,39 @@ export default function RestaurantDetailPage() {
   const [loading, setLoading] =
     useState(true)
 
+
   const [date, setDate] =
     useState<Date | undefined>(
       currentReservationRequest?.date
-        ? new Date(currentReservationRequest.date)
+        ? new Date(
+            currentReservationRequest.date
+          )
         : new Date()
     )
 
+
   const [time, setTime] =
     useState(
-      currentReservationRequest?.startTime ?? ""
+      currentReservationRequest?.startTime ??
+        ""
     )
+
 
   const [partySize, setPartySize] =
     useState<number>(
-      currentReservationRequest?.guestNumber ?? 2
+      currentReservationRequest?.guestNumber ??
+        2
     )
 
+
+  /*
+   * Initial restaurant data.
+   *
+   * Tables are NOT loaded here anymore because
+   * table availability depends on:
+   *
+   * restaurant + date + time + guest number.
+   */
   useEffect(() => {
     let isActive = true
 
@@ -123,22 +151,32 @@ export default function RestaurantDetailPage() {
       try {
         const [
           restaurantData,
-          tablesData,
           menuData,
         ] = await Promise.all([
           getRestaurantById(id),
-          getTablesByRestaurant(id),
           getMenuByRestaurant(id),
         ])
 
         if (!isActive) return
 
         setRestaurant(
-          restaurantData?.restaurant ?? null
+          restaurantData?.restaurant ??
+            null
         )
 
-        setTables(tablesData.tables)
-        setMenuItems(menuData.items)
+        setMenuItems(
+          menuData.items
+        )
+      } catch (error) {
+        console.error(
+          "Failed to load restaurant:",
+          error
+        )
+
+        if (isActive) {
+          setRestaurant(null)
+          setMenuItems([])
+        }
       } finally {
         if (isActive) {
           setLoading(false)
@@ -153,70 +191,286 @@ export default function RestaurantDetailPage() {
     }
   }, [id])
 
+
+  /*
+   * Load available reservation slots whenever
+   * date or party size changes.
+   *
+   * Backend already removes:
+   * - past times for today
+   * - times without a suitable free table
+   *
+   * If the currently selected time is still
+   * available, keep it.
+   *
+   * Otherwise automatically select the first
+   * available time.
+   */
   useEffect(() => {
-    if (!date) return
+    if (!date) {
+      setTimeSlots([])
+      setTime("")
+      setTables([])
+      setSelectedTable(null)
+
+      return
+    }
+
+    let isActive = true
 
     const fetchSlots = async () => {
-      const data =
-        await getAvailableSlots({
-          restaurantId: id,
-          date: format(
-            date,
-            "yyyy-MM-dd"
-          ),
-        })
+      try {
+        const data =
+          await getAvailableSlots({
+            restaurantId: id,
 
-      setTimeSlots(data.slots)
+            date: format(
+              date,
+              "yyyy-MM-dd"
+            ),
 
-      if (
-        currentReservationRequest?.startTime &&
-        data.slots.includes(
-          currentReservationRequest.startTime
+            guestNumber:
+              partySize,
+          })
+
+        if (!isActive) return
+
+        setTimeSlots(
+          data.slots
         )
-      ) {
+
+        if (
+          data.slots.length === 0
+        ) {
+          setTime("")
+          setTables([])
+          setSelectedTable(null)
+
+          return
+        }
+
         setTime(
-          currentReservationRequest.startTime
+          (previousTime) => {
+            if (
+              previousTime &&
+              data.slots.includes(
+                previousTime
+              )
+            ) {
+              return previousTime
+            }
+
+            return data.slots[0]
+          }
         )
-      } else if (data.slots.length > 0) {
-        setTime(data.slots[0])
-      } else {
-        setTime("")
+      } catch (error) {
+        console.error(
+          "Failed to load available slots:",
+          error
+        )
+
+        if (isActive) {
+          setTimeSlots([])
+          setTime("")
+          setTables([])
+          setSelectedTable(null)
+        }
       }
     }
 
     void fetchSlots()
+
+    return () => {
+      isActive = false
+    }
   }, [
-    date,
     id,
-    currentReservationRequest,
+    date,
+    partySize,
+    setSelectedTable,
   ])
+
+
+  /*
+   * Load table availability whenever:
+   *
+   * - restaurant changes
+   * - date changes
+   * - time changes
+   * - guest number changes
+   *
+   * This is triggered automatically after
+   * the slots effect selects the first
+   * available time.
+   */
+  useEffect(() => {
+    if (!date || !time) {
+      setTables([])
+      return
+    }
+
+    let isActive = true
+
+    const fetchTables = async () => {
+      try {
+        const data =
+          await getTablesByRestaurant({
+            restaurantId: id,
+
+            date: format(
+              date,
+              "yyyy-MM-dd"
+            ),
+
+            time,
+
+            guestNumber:
+              partySize,
+          })
+
+        if (!isActive) return
+
+        setTables(
+          data.tables
+        )
+      } catch (error) {
+        console.error(
+          "Failed to load available tables:",
+          error
+        )
+
+        if (isActive) {
+          setTables([])
+          setSelectedTable(null)
+        }
+      }
+    }
+
+    void fetchTables()
+
+    return () => {
+      isActive = false
+    }
+  }, [
+    id,
+    date,
+    time,
+    partySize,
+    setSelectedTable,
+  ])
+
+
+  /*
+   * If availability changes, make sure that
+   * the previously selected table is still
+   * valid.
+   *
+   * A table becomes invalid when:
+   *
+   * - it no longer exists in the response
+   * - there are no free tables
+   * - it does not have enough seats
+   */
+  useEffect(() => {
+    if (!selectedTable) {
+      return
+    }
+
+    const refreshedTable =
+      tables.find(
+        (table) =>
+          table.id ===
+          selectedTable.id
+      )
+
+    if (!refreshedTable) {
+      if (tables.length > 0) {
+        setSelectedTable(null)
+      }
+
+      return
+    }
+
+    if (
+      refreshedTable.availableNumber <= 0 ||
+      refreshedTable.seats <
+        partySize
+    ) {
+      setSelectedTable(null)
+    }
+  }, [
+    tables,
+    partySize,
+    selectedTable,
+    setSelectedTable,
+  ])
+
 
   const handleDateChange = (
     selected: Date | undefined
   ) => {
     setDate(selected)
+
+    /*
+     * Availability from the previous date
+     * must not remain visible while the new
+     * request is loading.
+     */
+    setTables([])
+    setSelectedTable(null)
   }
+
+
+  const handleTimeChange = (
+    value: string
+  ) => {
+    setTime(value)
+
+    /*
+     * Table availability belongs to the old
+     * time until the new request finishes.
+     */
+    setTables([])
+    setSelectedTable(null)
+  }
+
 
   const maxSeats =
     tables.length > 0
       ? Math.max(
           ...tables.map(
-            (table) => table.seats
+            (table) =>
+              table.seats
           )
         )
       : 10
 
+
   const handleTableSelect = (
     table: Table
   ) => {
+    /*
+     * Extra frontend protection.
+     * TableLayout should also visually
+     * disable these tables.
+     */
     if (
-      selectedTable?.id === table.id
+      table.availableNumber <= 0 ||
+      table.seats < partySize
+    ) {
+      return
+    }
+
+    if (
+      selectedTable?.id ===
+      table.id
     ) {
       setSelectedTable(null)
     } else {
       setSelectedTable(table)
     }
   }
+
 
   const buildReservationRequest =
     (): ReservationRequest | null => {
@@ -248,13 +502,21 @@ export default function RestaurantDetailPage() {
           partySize,
 
         orders:
-          currentReservationRequest?.orders ?? [],
+          currentReservationRequest
+            ?.orders ?? [],
 
         servingTime:
-          currentReservationRequest?.servingTime,
+          currentReservationRequest
+            ?.servingTime,
       }
     }
 
+
+  /*
+   * Keep the reservation request in the
+   * application store while the user moves
+   * between reservation and menu pages.
+   */
   useEffect(() => {
     const request =
       buildReservationRequest()
@@ -270,6 +532,7 @@ export default function RestaurantDetailPage() {
     partySize,
     selectedTable,
   ])
+
 
   const handleBookWithoutPreorder =
     async () => {
@@ -310,6 +573,7 @@ export default function RestaurantDetailPage() {
       }
     }
 
+
   const handleProceedToMenu = () => {
     if (!isAuthenticated) {
       saveRedirectUrl()
@@ -331,9 +595,11 @@ export default function RestaurantDetailPage() {
     )
   }
 
+
   if (loading) {
     return <Loading />
   }
+
 
   if (!restaurant) {
     return (
@@ -344,7 +610,8 @@ export default function RestaurantDetailPage() {
           </h1>
 
           <p className="mt-2 text-sm text-muted-foreground">
-            The restaurant you're looking for is not available.
+            The restaurant you're looking
+            for is not available.
           </p>
 
           <Button
@@ -361,6 +628,7 @@ export default function RestaurantDetailPage() {
       </PageContainer>
     )
   }
+
 
   return (
     <>
@@ -389,6 +657,7 @@ export default function RestaurantDetailPage() {
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+
                   <span className="font-medium">
                     {restaurant.rating}
                   </span>
@@ -396,22 +665,34 @@ export default function RestaurantDetailPage() {
 
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
+
                   <span>
-                    {restaurant.address}, {restaurant.city}
+                    {restaurant.address},{" "}
+                    {restaurant.city}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
+
                   <span>
-                    {restaurant.phoneNumber}
+                    {
+                      restaurant.phoneNumber
+                    }
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
+
                   <span>
-                    {restaurant.openingTime} - {restaurant.closingTime}
+                    {
+                      restaurant.openingTime
+                    }{" "}
+                    -{" "}
+                    {
+                      restaurant.closingTime
+                    }
                   </span>
                 </div>
               </div>
@@ -420,11 +701,13 @@ export default function RestaurantDetailPage() {
         </div>
       </div>
 
-      <PageContainer>
 
+      <PageContainer>
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+
           {/* Left */}
           <div className="space-y-6">
+
             <Card className="rounded-2xl border shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">
@@ -434,10 +717,13 @@ export default function RestaurantDetailPage() {
 
               <CardContent>
                 <p className="text-sm leading-7 text-muted-foreground">
-                  {restaurant.description}
+                  {
+                    restaurant.description
+                  }
                 </p>
               </CardContent>
             </Card>
+
 
             <Card className="rounded-2xl border shadow-sm">
               <CardHeader className="pb-4">
@@ -446,13 +732,16 @@ export default function RestaurantDetailPage() {
                 </CardTitle>
 
                 <p className="text-sm text-muted-foreground">
-                  Choose an available table for your party
+                  Choose an available table
+                  for your party
                 </p>
               </CardHeader>
 
               <CardContent>
                 <TableLayout
-                  tables={tables}
+                  tables={
+                    tables
+                  }
                   selectedTable={
                     selectedTable
                   }
@@ -466,10 +755,14 @@ export default function RestaurantDetailPage() {
               </CardContent>
             </Card>
 
+
             <MenuPreview
-              menuItems={menuItems}
+              menuItems={
+                menuItems
+              }
             />
           </div>
+
 
           {/* Right */}
           <aside>
@@ -480,11 +773,14 @@ export default function RestaurantDetailPage() {
                 </CardTitle>
 
                 <p className="text-sm text-muted-foreground">
-                  Choose your party size, date and time
+                  Choose your party size,
+                  date and time
                 </p>
               </CardHeader>
 
+
               <CardContent className="space-y-5">
+
                 {/* Party size */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
@@ -519,6 +815,7 @@ export default function RestaurantDetailPage() {
                     <SelectTrigger className="h-11 w-full rounded-xl">
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-muted-foreground" />
+
                         <SelectValue />
                       </div>
                     </SelectTrigger>
@@ -552,6 +849,7 @@ export default function RestaurantDetailPage() {
                   </Select>
                 </div>
 
+
                 {/* Date */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
@@ -567,6 +865,7 @@ export default function RestaurantDetailPage() {
                         variant="outline"
                         className={cn(
                           "h-11 w-full justify-start rounded-xl px-3 font-normal",
+
                           !date &&
                             "text-muted-foreground"
                         )}
@@ -582,13 +881,16 @@ export default function RestaurantDetailPage() {
                       </Button>
                     </PopoverTrigger>
 
+
                     <PopoverContent
                       className="w-auto p-0"
                       align="start"
                     >
                       <Calendar
                         mode="single"
-                        selected={date}
+                        selected={
+                          date
+                        }
                         onSelect={
                           handleDateChange
                         }
@@ -615,6 +917,7 @@ export default function RestaurantDetailPage() {
                   </Popover>
                 </div>
 
+
                 {/* Time */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
@@ -622,9 +925,11 @@ export default function RestaurantDetailPage() {
                   </label>
 
                   <Select
-                    value={time}
+                    value={
+                      time
+                    }
                     onValueChange={
-                      setTime
+                      handleTimeChange
                     }
                     disabled={
                       timeSlots.length ===
@@ -637,7 +942,8 @@ export default function RestaurantDetailPage() {
 
                         <SelectValue
                           placeholder={
-                            timeSlots.length > 0
+                            timeSlots.length >
+                            0
                               ? "Select time"
                               : "No times available"
                           }
@@ -649,8 +955,12 @@ export default function RestaurantDetailPage() {
                       {timeSlots.map(
                         (slot) => (
                           <SelectItem
-                            key={slot}
-                            value={slot}
+                            key={
+                              slot
+                            }
+                            value={
+                              slot
+                            }
                           >
                             {slot}
                           </SelectItem>
@@ -660,10 +970,12 @@ export default function RestaurantDetailPage() {
                   </Select>
                 </div>
 
+
                 {/* Selected table */}
                 {selectedTable && (
                   <div className="rounded-xl bg-primary/5 p-3.5">
                     <div className="flex items-start gap-3">
+
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                         <Check className="h-4 w-4 text-primary" />
                       </div>
@@ -674,15 +986,25 @@ export default function RestaurantDetailPage() {
                         </p>
 
                         <p className="mt-0.5 text-sm font-semibold capitalize">
-                          { selectedTable.location } · { selectedTable.seats } seats
+                          {
+                            selectedTable.location
+                          }{" "}
+                          ·{" "}
+                          {
+                            selectedTable.seats
+                          }{" "}
+                          seats
                         </p>
                       </div>
+
                     </div>
                   </div>
                 )}
 
+
                 {/* Actions */}
                 <div className="space-y-3 pt-1">
+
                   <Button
                     type="button"
                     size="lg"
@@ -697,8 +1019,10 @@ export default function RestaurantDetailPage() {
                     }
                   >
                     Book Table
+
                     <Check className="ml-2 h-4 w-4" />
                   </Button>
+
 
                   <Button
                     type="button"
@@ -715,19 +1039,26 @@ export default function RestaurantDetailPage() {
                     }
                   >
                     <UtensilsCrossed className="mr-2 h-4 w-4" />
+
                     Pre-order Food
+
                     <ChevronRight className="ml-auto h-4 w-4" />
                   </Button>
+
                 </div>
+
 
                 {!selectedTable && (
                   <p className="text-center text-xs text-muted-foreground">
-                    Select a table to continue
+                    Select a table to
+                    continue
                   </p>
                 )}
+
               </CardContent>
             </Card>
           </aside>
+
         </div>
       </PageContainer>
     </>

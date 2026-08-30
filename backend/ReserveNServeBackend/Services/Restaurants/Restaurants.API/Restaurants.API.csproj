@@ -7,6 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.83.0" />
+
+    <PackageReference Include="Grpc.Tools" Version="2.83.0">
+      <PrivateAssets>All</PrivateAssets>
+    </PackageReference>
+
+    <PackageReference Include="Google.Protobuf" Version="3.31.1" />
+
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.3" />
@@ -16,6 +24,7 @@
 
   <ItemGroup>
     <Folder Include="Images\MenuItemImages\" />
+    <Protobuf Include="Protos/restaurants.proto" GrpcServices="Server" />
   </ItemGroup>
 
 </Project>

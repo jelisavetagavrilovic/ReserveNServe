@@ -4,6 +4,8 @@
 /// cancelling reservations and starting food payments.
 /// </summary>
 
+using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Reservations.Application.DTOs.Requests;
 using Reservations.Application.DTOs.Responses;
@@ -163,6 +165,49 @@ public class ReservationsController : ControllerBase
             userId);
 
         return NoContent();
+    }
+    
+    /// <summary>
+    /// Returns available reservation time slots
+    /// for the selected restaurant, date and guest number.
+    /// </summary>
+    [HttpGet("availability/slots")]
+    public async Task<ActionResult<List<AvailableSlotResponse>>>
+        GetAvailableSlots(
+            [FromQuery] int restaurantId,
+            [FromQuery] DateOnly date,
+            [FromQuery] int guestNumber)
+    {
+        var result =
+            await _reservationService.GetAvailableSlotsAsync(
+                restaurantId,
+                date,
+                guestNumber);
+
+        return Ok(result);
+    }
+
+
+    /// <summary>
+    /// Returns table groups and their current availability
+    /// for the selected restaurant, date and time.
+    /// </summary>
+    [HttpGet("availability/tables")]
+    public async Task<ActionResult<List<AvailableTableResponse>>>
+        GetAvailableTables(
+            [FromQuery] int restaurantId,
+            [FromQuery] DateOnly date,
+            [FromQuery] TimeOnly time,
+            [FromQuery] int guestNumber)
+    {
+        var result =
+            await _reservationService.GetAvailableTablesAsync(
+                restaurantId,
+                date,
+                time,
+                guestNumber);
+
+        return Ok(result);
     }
 
 
