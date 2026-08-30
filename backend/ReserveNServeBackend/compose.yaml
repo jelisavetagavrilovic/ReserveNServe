@@ -364,7 +364,7 @@
       - "${RESERVATIONS_HTTPS_PORT:-7294}:8081"
 
     volumes:
-      - ${HOME}/.aspnet/https:/https:ro
+      - "${ASPNET_HTTPS_PATH}:/https:ro"
 
     depends_on:
       reservations-db:
