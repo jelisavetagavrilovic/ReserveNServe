@@ -84,12 +84,12 @@
                                 <td style="padding:13px 0; border-bottom:1px solid #E3DDD8;">
                                     <div style="font-weight:bold;">{{ order.food_name | html.escape }}</div>
                                     <div style="margin-top:3px; font-size:13px; color:#423E3E;">
-                                        {{ order.quantity }} × {{ order.price }} RSD
+                                        {{ order.quantity }} × {{ order.price | math.format "0.00" }} RSD
                                     </div>
                                 </td>
 
                                 <td align="right" style="padding:13px 0; border-bottom:1px solid #E3DDD8; font-weight:bold;">
-                                    {{ order.total }} RSD
+                                    {{ order.total | math.format "0.00" }} RSD
                                 </td>
                             </tr>
                             {{ end }}
@@ -99,10 +99,41 @@
                             <tr>
                                 <td style="font-size:16px; font-weight:bold;">Total</td>
                                 <td align="right" style="font-size:20px; font-weight:bold; color:#B8492E;">
-                                    {{ total_amount }} RSD
+                                    {{ total_amount | math.format "0.00" }} RSD
                                 </td>
                             </tr>
                         </table>
+
+                        {{ if receipt_url }}
+
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                               style="margin-top:26px; background-color:#F0EAE5; border-radius:8px;">
+                            <tr>
+                                <td style="padding:18px 20px;">
+                                    <div style="font-size:15px; font-weight:bold; color:#1E1311;">
+                                        Payment completed successfully
+                                    </div>
+
+                                    <div style="margin-top:5px; font-size:13px; line-height:1.5; color:#423E3E;">
+                                        Your food order has been paid. You can view the Stripe payment receipt below.
+                                    </div>
+
+                                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:16px;">
+                                        <tr>
+                                            <td style="background-color:#B8492E; border-radius:6px;">
+                                                <a href="{{ receipt_url | html.escape }}"
+                                                   target="_blank"
+                                                   style="display:inline-block; padding:11px 20px; color:#FBF8F5; font-size:14px; font-weight:bold; text-decoration:none;">
+                                                    View payment receipt
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+
+                        {{ end }}
 
                         {{ end }}
 

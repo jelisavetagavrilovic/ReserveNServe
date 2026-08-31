@@ -90,12 +90,22 @@ public class PaymentsHandler
         if (currentStatus != PaymentStatus.PaymentPending &&
             currentStatus != PaymentStatus.PaymentFailed)
             return;
+        
+        string? receiptUrl = null;
+
+        if (!string.IsNullOrWhiteSpace(paymentIntent.LatestChargeId))
+        {
+            var chargeService = new ChargeService();
+            var charge = await chargeService.GetAsync(paymentIntent.LatestChargeId);
+            receiptUrl = charge.ReceiptUrl;
+        }
     
         await UpdatePaymentStatusAsync(payment.id, PaymentStatus.PaymentSucceeded);
     
         await _paymentStatusPublisher.PublishAsync(
             payment.reservation_id,
-            PaymentStatus.PaymentSucceeded
+            PaymentStatus.PaymentSucceeded,
+            receiptUrl
         );
     }
 
@@ -120,16 +130,11 @@ public class PaymentsHandler
 
     private async Task HandleRefundChanged(Event stripeEvent)
     {
-        if (stripeEvent.Data.Object is not Refund refund)
-            return;
-
-        if (string.IsNullOrWhiteSpace(refund.PaymentIntentId))
-            return;
+        if (stripeEvent.Data.Object is not Refund refund) return;
+        if (string.IsNullOrWhiteSpace(refund.PaymentIntentId)) return;
 
         var payment = await GetPaymentByIntentIdAsync(refund.PaymentIntentId);
-
-        if (payment == null)
-            return;
+        if (payment == null) return;
 
         var newStatus = refund.Status switch
         {
@@ -139,13 +144,27 @@ public class PaymentsHandler
             _ => PaymentStatus.RefundPending
         };
 
-        if (payment.status == (int)newStatus)
-            return;
-
-        await UpdatePaymentStatusAsync(payment.id, newStatus);
-
+        string? receiptUrl = null;
+        
+        if (newStatus == PaymentStatus.RefundSucceeded)
+        {
+            var paymentIntentService = new PaymentIntentService();
+            var paymentIntent = await paymentIntentService.GetAsync(refund.PaymentIntentId);
+        
+            if (!string.IsNullOrWhiteSpace(paymentIntent.LatestChargeId))
+            {
+                var chargeService = new ChargeService();
+                var charge = await chargeService.GetAsync(paymentIntent.LatestChargeId);
+                receiptUrl = charge.ReceiptUrl;
+            }
+        }
+        
+        if (payment.status != (int)newStatus)
+            await UpdatePaymentStatusAsync(payment.id, newStatus);
+        
         await _paymentStatusPublisher.PublishAsync(
             payment.reservation_id,
-            newStatus);
+            newStatus,
+            receiptUrl);
     }
 }

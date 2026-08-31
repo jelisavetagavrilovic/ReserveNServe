@@ -96,7 +96,8 @@ public class PaymentStatusChangedConsumer : BackgroundService
                     new PaymentStatusUpdateRequest
                     {
                         ReservationId = reservationId,
-                        Status = status
+                        Status = status,
+                        ReceiptUrl = message.ReceiptUrl
                     });
 
                 await _channel.BasicAckAsync(ea.DeliveryTag, false);

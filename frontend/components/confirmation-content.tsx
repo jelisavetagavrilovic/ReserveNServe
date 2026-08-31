@@ -1,43 +1,20 @@
 "use client"
 
-import {
-  useEffect,
-  useState,
-} from "react"
-
+import { useEffect, useState } from "react"
 import Link from "next/link"
-
-import {
-  useRouter,
-  useSearchParams,
-} from "next/navigation"
-
+import { useRouter, useSearchParams} from "next/navigation"
 import { useAppStore } from "@/lib/store"
-
-import {
-  getReservationById,
-} from "@/lib/api/reservation.api"
-
-import type {
-  ReservationResponse,
-} from "@/lib/types/reservation.types"
-
-import {
-  ConfirmationSummary,
-} from "@/components/confirmation-summary"
-
-import {
-  PageContainer,
-} from "@/components/page-container"
-
+import { getReservationById } from "@/lib/api/reservation.api"
+import type { ReservationResponse } from "@/lib/types/reservation.types"
+import { ConfirmationSummary } from "@/components/confirmation-summary"
+import { PageContainer } from "@/components/page-container"
 import Loading from "@/components/loading"
-
 import { Button } from "@/components/ui/button"
-
 import {
   CalendarDays,
   CheckCircle2,
   Home,
+  Mail
 } from "lucide-react"
 
 
@@ -278,6 +255,24 @@ export function ConfirmationContent() {
           <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
             Your reservation is confirmed and everything is ready for your visit
           </p>
+
+          {reservation.paymentStatus === "NotRequired" && (
+            <div className="mx-auto mt-4 flex max-w-md items-center justify-center gap-2 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              <Mail className="h-4 w-4 shrink-0 text-primary" />
+              <span>
+                We've sent a confirmation email with your reservation details.
+              </span>
+            </div>
+          )}
+
+          {reservation.paymentStatus === "Succeeded" && (
+            <div className="mx-auto mt-4 flex max-w-md items-center justify-center gap-2 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              <Mail className="h-4 w-4 shrink-0 text-primary" />
+              <span>
+                We've sent a confirmation email with your reservation details and payment receipt.
+              </span>
+            </div>
+          )}
 
         </div>
 

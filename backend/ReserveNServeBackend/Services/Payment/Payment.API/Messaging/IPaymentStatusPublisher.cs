@@ -4,5 +4,5 @@ namespace Payment.API.Messaging;
 
 public interface IPaymentStatusPublisher
 {
-    Task PublishAsync(string reservationId, PaymentStatus status);
+    Task PublishAsync(string reservationId, PaymentStatus status, string? receiptUrl = null);
 }

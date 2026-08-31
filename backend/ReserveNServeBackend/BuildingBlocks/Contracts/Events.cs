@@ -34,10 +34,41 @@ public record ReservationConfirmed(
     string TableLocation,
     string? ServingTime,
     decimal TotalAmount,
-    IReadOnlyList<ReservationOrderItem> Orders);
+    IReadOnlyList<ReservationOrderItem> Orders,
+    string? ReceiptUrl);
 
 public record ReservationOrderItem(
     string FoodName,
     decimal Price,
     int Quantity,
     decimal Total);
+
+/// <summary>
+/// Published when a reservation is canceled.
+/// </summary>
+public record ReservationCancelled(
+    Guid ReservationId,
+    string Email,
+    string RestaurantName,
+    string RestaurantAddress,
+    string RestaurantCity,
+    DateOnly Date,
+    TimeOnly StartTime,
+    int GuestNumber,
+    string TableLocation,
+    bool RefundExpected,
+    decimal TotalAmount);
+    
+/// <summary>
+/// Published when a reservation is refunded.
+/// </summary>
+public record ReservationRefunded(
+    Guid ReservationId,
+    string Email,
+    string RestaurantName,
+    string RestaurantAddress,
+    string RestaurantCity,
+    DateOnly Date,
+    TimeOnly StartTime,
+    decimal Amount,
+    string? ReceiptUrl);

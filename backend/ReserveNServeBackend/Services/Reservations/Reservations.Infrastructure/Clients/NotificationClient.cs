@@ -28,13 +28,43 @@ public class NotificationClient : INotificationClient
             notification.ServingTime,
             notification.TotalAmount,
             notification.Orders.Select(o =>
-                new ReservationOrderItem(o.FoodName, o.Price, o.Quantity, o.Total)).ToList());
+                new ReservationOrderItem(o.FoodName, o.Price, o.Quantity, o.Total)).ToList(),
+            notification.ReceiptUrl);
 
         return _publishEndpoint.Publish(message);
     }
 
-    public Task SendReservationCancelledAsync(Guid reservationId)
+    public Task SendReservationCancelledAsync(ReservationCancelledNotification notification)
     {
-        return Task.CompletedTask;
+        var message = new ReservationCancelled(
+            notification.ReservationId,
+            notification.Email,
+            notification.RestaurantName,
+            notification.RestaurantAddress,
+            notification.RestaurantCity,
+            notification.Date,
+            notification.StartTime,
+            notification.GuestNumber,
+            notification.TableLocation,
+            notification.RefundExpected,
+            notification.TotalAmount);
+
+        return _publishEndpoint.Publish(message);
+    }
+    
+    public Task SendReservationRefundedAsync(ReservationRefundedNotification notification)
+    {
+        var message = new ReservationRefunded(
+            notification.ReservationId,
+            notification.Email,
+            notification.RestaurantName,
+            notification.RestaurantAddress,
+            notification.RestaurantCity,
+            notification.Date,
+            notification.StartTime,
+            notification.Amount,
+            notification.ReceiptUrl);
+
+        return _publishEndpoint.Publish(message);
     }
 }

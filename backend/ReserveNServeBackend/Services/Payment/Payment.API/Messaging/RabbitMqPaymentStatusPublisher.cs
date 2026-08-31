@@ -17,7 +17,7 @@ public class RabbitMqPaymentStatusPublisher : IPaymentStatusPublisher
         _configuration = configuration;
     }
 
-    public async Task PublishAsync(string reservationId, PaymentStatus status)
+    public async Task PublishAsync(string reservationId, PaymentStatus status, string? receiptUrl = null)
     {
         var factory = new ConnectionFactory
         {
@@ -34,10 +34,13 @@ public class RabbitMqPaymentStatusPublisher : IPaymentStatusPublisher
             type: ExchangeType.Topic,
             durable: true,
             autoDelete: false);
-
-        var message = new PaymentStatusChangedEvent(
+        
+        var message = new
+        {
             reservationId,
-            status.ToString());
+            status = status.ToString(),
+            receiptUrl
+        };
 
         var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
 
@@ -58,4 +61,5 @@ public class RabbitMqPaymentStatusPublisher : IPaymentStatusPublisher
 
 public record PaymentStatusChangedEvent(
     string ReservationId,
-    string Status);
+    string Status,
+    string? ReceiptUrl = null);
