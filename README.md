@@ -6,6 +6,8 @@ The application allows users to browse restaurants, check table availability, cr
 
 The system consists of a **Next.js frontend** and multiple **ASP.NET Core microservices**, with Docker Compose used to run the complete application locally.
 
+A video demonstration of the ReserveNServe application is available on [Google Drive](https://drive.google.com/file/d/1f9OtN2Ei8Sn2Zv23GxueeDzQf7xu-zhz/view?usp=drive_link).
+
 ---
 
 ## Main Features
@@ -261,8 +263,7 @@ dotnet test ReserveNServeBackend.slnx
 Tests are organized under the central `Tests/` directory and include:
 
 * unit tests for individual services
-* integration-related service tests
-* end-to-end tests for complete application flows
+* end-to-end tests for complete application flows (docker containers must be up)
 
 ---
 
