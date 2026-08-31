@@ -542,25 +542,26 @@ public class ReservationService : IReservationService
 
         var response = MapToResponse(reservation, restaurant, tableGroup);
 
-        await _notificationClient.SendReservationConfirmedAsync(
-            new ReservationConfirmedNotification(
-                reservation.Id,
-                contactEmail,
-                response.RestaurantName,
-                response.RestaurantAddress,
-                response.RestaurantCity,
-                response.Date,
-                response.StartTime,
-                response.GuestNumber,
-                response.TableLocation,
-                response.ServingTime,
-                response.TotalAmount,
-                response.Orders.Select(o =>
-                    new ReservationNotificationOrderItem(
-                        o.FoodName,
-                        o.Price,
-                        o.Quantity,
-                        o.Total)).ToList()));
+        if (response.Orders.Count == 0)
+        {
+            await _notificationClient.SendReservationConfirmedAsync(
+                new ReservationConfirmedNotification(
+                    reservation.Id,
+                    contactEmail,
+                    response.RestaurantName,
+                    response.RestaurantAddress,
+                    response.RestaurantCity,
+                    response.Date,
+                    response.StartTime,
+                    response.GuestNumber,
+                    response.TableLocation,
+                    response.ServingTime,
+                    response.TotalAmount,
+                    response.Orders.Select(o =>
+                        new ReservationNotificationOrderItem(o.FoodName, o.Price, o.Quantity, o.Total)).ToList(),
+                    null));
+        }
+        
 
         return response;
     }
@@ -845,37 +846,46 @@ public class ReservationService : IReservationService
             switch (refund.Status)
             {
                 case PaymentStatus.RefundPending:
-                    break;
-
                 case PaymentStatus.RefundSucceeded:
-                    reservation.MarkPaymentRefunded();
                     break;
-
+            
                 case PaymentStatus.RefundFailed:
                     reservation.MarkRefundFailed();
+                    await _reservationRepository.UpdateAsync(reservation);
                     break;
-
+            
                 case PaymentStatus.PaymentPending:
                 case PaymentStatus.PaymentSucceeded:
                 case PaymentStatus.PaymentFailed:
                     throw new InvalidOperationException(
-                        "Payment service returned a payment status " +
-                        "while processing a refund.");
-
+                        "Payment service returned a payment status while processing a refund.");
+            
                 default:
                     throw new ArgumentOutOfRangeException(
-                        nameof(refund.Status),
-                        refund.Status,
-                        "Unsupported refund status.");
+                        nameof(refund.Status), refund.Status, "Unsupported refund status.");
             }
 
             await _reservationRepository.UpdateAsync(
                 reservation);
         }
 
-        await _notificationClient
-            .SendReservationCancelledAsync(
-                reservation.Id);
+        var restaurant = await GetRestaurantInfoAsync(reservation.RestaurantId);
+        var tableGroup = GetTableGroup(restaurant, reservation.TableGroupId);
+        var response = MapToResponse(reservation, restaurant, tableGroup);
+
+        await _notificationClient.SendReservationCancelledAsync(
+            new ReservationCancelledNotification(
+                reservation.Id,
+                reservation.ContactEmail,
+                response.RestaurantName,
+                response.RestaurantAddress,
+                response.RestaurantCity,
+                response.Date,
+                response.StartTime,
+                response.GuestNumber,
+                response.TableLocation,
+                requiresRefund,
+                response.TotalAmount));
     }
 
     public async Task HandlePaymentStatusUpdateAsync(
@@ -898,6 +908,8 @@ public class ReservationService : IReservationService
          * information and send the current logical status associated
          * with this ReservationId.
          */
+        var sendPaidConfirmation = false;
+        var sendRefundConfirmation = false;
         switch (request.Status)
         {
             case PaymentStatus.PaymentPending:
@@ -910,7 +922,11 @@ public class ReservationService : IReservationService
                 break;
 
             case PaymentStatus.PaymentSucceeded:
-                reservation.MarkPaymentSucceeded();
+                if (reservation.PaymentStatus != ReservationPaymentStatus.Succeeded)
+                {
+                    reservation.MarkPaymentSucceeded();
+                    sendPaidConfirmation = true;
+                }
                 break;
 
             case PaymentStatus.PaymentFailed:
@@ -934,13 +950,16 @@ public class ReservationService : IReservationService
                 }
 
                 break;
-
+            
             case PaymentStatus.RefundSucceeded:
                 /*
                  * A final refund update may arrive without a separate
                  * RefundPending update, so normalize the domain state
                  * before marking the refund as complete.
                  */
+                
+                var previousPaymentStatus = reservation.PaymentStatus;
+
                 if (reservation.PaymentStatus ==
                     ReservationPaymentStatus.Succeeded ||
                     reservation.PaymentStatus ==
@@ -950,8 +969,12 @@ public class ReservationService : IReservationService
                 }
 
                 reservation.MarkPaymentRefunded();
-                break;
 
+                sendRefundConfirmation =
+                    reservation.PaymentStatus != previousPaymentStatus;
+
+                break;
+            
             case PaymentStatus.RefundFailed:
                 /*
                  * Same idea as above: the Payment service may report
@@ -975,5 +998,47 @@ public class ReservationService : IReservationService
 
         await _reservationRepository.UpdateAsync(
             reservation);
+        
+        if (sendPaidConfirmation)
+        {
+            var restaurant = await GetRestaurantInfoAsync(reservation.RestaurantId);
+            var tableGroup = GetTableGroup(restaurant, reservation.TableGroupId);
+            var response = MapToResponse(reservation, restaurant, tableGroup);
+
+            await _notificationClient.SendReservationConfirmedAsync(
+                new ReservationConfirmedNotification(
+                    reservation.Id,
+                    reservation.ContactEmail,
+                    response.RestaurantName,
+                    response.RestaurantAddress,
+                    response.RestaurantCity,
+                    response.Date,
+                    response.StartTime,
+                    response.GuestNumber,
+                    response.TableLocation,
+                    response.ServingTime,
+                    response.TotalAmount,
+                    response.Orders.Select(o =>
+                        new ReservationNotificationOrderItem(
+                            o.FoodName, o.Price, o.Quantity, o.Total)).ToList(),
+                    request.ReceiptUrl));
+        }
+        
+        if (sendRefundConfirmation)
+        {
+            var restaurant = await GetRestaurantInfoAsync(reservation.RestaurantId);
+
+            await _notificationClient.SendReservationRefundedAsync(
+                new ReservationRefundedNotification(
+                    reservation.Id,
+                    reservation.ContactEmail,
+                    restaurant.RestaurantName,
+                    restaurant.RestaurantAddress,
+                    restaurant.RestaurantCity,
+                    DateOnly.FromDateTime(reservation.StartTime),
+                    TimeOnly.FromDateTime(reservation.StartTime),
+                    reservation.TotalAmount,
+                    request.ReceiptUrl));
+        }
     }
 }
