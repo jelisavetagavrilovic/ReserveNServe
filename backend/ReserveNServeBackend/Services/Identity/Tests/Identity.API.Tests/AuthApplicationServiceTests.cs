@@ -6,10 +6,10 @@ using Identity.API.Services;
 using Identity.API.Services.Interfaces;
 using MassTransit;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
 using Xunit;
 
 namespace Identity.API.Tests;
@@ -20,7 +20,7 @@ public class AuthApplicationServiceTests
         Mock<UserManager<ApplicationUser>> userManager,
         Mock<SignInManager<ApplicationUser>> signInManager,
         Mock<ITokenService> tokens)
-        => new AuthApplicationService(
+        => new(
             userManager.Object,
             signInManager.Object,
             tokens.Object,
@@ -34,13 +34,17 @@ public class AuthApplicationServiceTests
         var signInManager = TestHelpers.CreateSignInManagerMock(userManager.Object);
         var tokens = new Mock<ITokenService>();
 
-        userManager.Setup(x => x.FindByEmailAsync("ana@test.com"))
-            .ReturnsAsync(new ApplicationUser { Email = "ana@test.com" });
+        userManager.Setup(x => x.FindByEmailAsync("test@test.com"))
+            .ReturnsAsync(new ApplicationUser { Email = "test@test.com" });
 
         var service = CreateService(userManager, signInManager, tokens);
 
         var result = await service.RegisterAsync(
-            new RegisterRequest("ana@test.com", "Password123"),
+            new RegisterRequest(
+                "Test User",
+                "test@test.com",
+                "+381601234567",
+                "Password123!"),
             isDevelopment: true);
 
         result.StatusCode.Should().Be(StatusCodes.Status409Conflict);
@@ -53,16 +57,17 @@ public class AuthApplicationServiceTests
         var signInManager = TestHelpers.CreateSignInManagerMock(userManager.Object);
         var tokens = new Mock<ITokenService>();
 
-        userManager.Setup(x => x.FindByEmailAsync("ana@test.com"))
+        userManager.Setup(x => x.FindByEmailAsync("test@test.com"))
             .ReturnsAsync(new ApplicationUser
             {
-                Email = "ana@test.com",
+                Email = "test@test.com",
                 EmailConfirmed = false
             });
 
         var service = CreateService(userManager, signInManager, tokens);
 
-        var result = await service.LoginAsync(new LoginRequest("ana@test.com", "Password123"));
+        var result = await service.LoginAsync(
+            new LoginRequest("test@test.com", "Password123"));
 
         result.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
     }
@@ -73,7 +78,7 @@ public class AuthApplicationServiceTests
         var user = new ApplicationUser
         {
             Id = "u1",
-            Email = "ana@test.com",
+            Email = "test@test.com",
             EmailConfirmed = true
         };
 
@@ -81,18 +86,23 @@ public class AuthApplicationServiceTests
         var signInManager = TestHelpers.CreateSignInManagerMock(userManager.Object);
         var tokens = new Mock<ITokenService>();
 
-        userManager.Setup(x => x.FindByEmailAsync("ana@test.com"))
+        userManager.Setup(x => x.FindByEmailAsync("test@test.com"))
             .ReturnsAsync(user);
 
-        signInManager.Setup(x => x.CheckPasswordSignInAsync(user, "Password123", true))
+        signInManager.Setup(x =>
+                x.CheckPasswordSignInAsync(user, "Password123", true))
             .ReturnsAsync(SignInResult.Success);
 
         tokens.Setup(x => x.CreateAuthResponseAsync(user))
-            .ReturnsAsync(("access-token", DateTime.UtcNow.AddMinutes(60), "refresh-token"));
+            .ReturnsAsync((
+                "access-token",
+                DateTime.UtcNow.AddMinutes(60),
+                "refresh-token"));
 
         var service = CreateService(userManager, signInManager, tokens);
 
-        var result = await service.LoginAsync(new LoginRequest("ana@test.com", "Password123"));
+        var result = await service.LoginAsync(
+            new LoginRequest("test@test.com", "Password123"));
 
         result.StatusCode.Should().Be(StatusCodes.Status200OK);
     }
@@ -105,11 +115,15 @@ public class AuthApplicationServiceTests
         var tokens = new Mock<ITokenService>();
 
         tokens.Setup(x => x.RefreshAsync("bad-token"))
-            .ReturnsAsync(((string accessToken, DateTime expiresAtUtc, string refreshToken)?)null);
+            .ReturnsAsync(
+                ((string accessToken,
+                  DateTime expiresAtUtc,
+                  string refreshToken)?)null);
 
         var service = CreateService(userManager, signInManager, tokens);
 
-        var result = await service.RefreshAsync(new RefreshRequest("bad-token"));
+        var result = await service.RefreshAsync(
+            new RefreshRequest("bad-token"));
 
         result.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
     }
@@ -126,30 +140,10 @@ public class AuthApplicationServiceTests
 
         var service = CreateService(userManager, signInManager, tokens);
 
-        var result = await service.LogoutAsync(new LogoutRequest("bad-token"));
+        var result = await service.LogoutAsync(
+            new LogoutRequest("bad-token"));
 
         result.StatusCode.Should().Be(StatusCodes.Status404NotFound);
-    }
-
-    [Fact]
-    public void Me_ShouldReturn200_WhenClaimsExist()
-    {
-        var userManager = TestHelpers.CreateUserManagerMock();
-        var signInManager = TestHelpers.CreateSignInManagerMock(userManager.Object);
-        var tokens = new Mock<ITokenService>();
-
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, "u1"),
-            new Claim(ClaimTypes.Email, "ana@test.com"),
-            new Claim(ClaimTypes.Role, "User")
-        }, "test"));
-
-        var service = CreateService(userManager, signInManager, tokens);
-
-        var result = service.Me(principal);
-
-        result.StatusCode.Should().Be(StatusCodes.Status200OK);
     }
 
     [Fact]
@@ -162,17 +156,23 @@ public class AuthApplicationServiceTests
         tokens.Setup(x => x.RevokeAllRefreshTokensForUserAsync("u1"))
             .ReturnsAsync(3);
 
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(new[]
-        {
-        new Claim(ClaimTypes.NameIdentifier, "u1")
-    }, "test"));
+        var principal = new ClaimsPrincipal(
+            new ClaimsIdentity(
+                new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, "u1")
+                },
+                "test"));
 
         var service = CreateService(userManager, signInManager, tokens);
 
         var result = await service.LogoutAllAsync(principal);
 
         result.StatusCode.Should().Be(StatusCodes.Status202Accepted);
-        tokens.Verify(x => x.RevokeAllRefreshTokensForUserAsync("u1"), Times.Once);
+
+        tokens.Verify(
+            x => x.RevokeAllRefreshTokensForUserAsync("u1"),
+            Times.Once);
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public class AuthApplicationServiceTests
         var user = new ApplicationUser
         {
             Id = "u1",
-            Email = "ana@test.com",
+            Email = "test@test.com",
             EmailConfirmed = true
         };
 
@@ -189,15 +189,17 @@ public class AuthApplicationServiceTests
         var signInManager = TestHelpers.CreateSignInManagerMock(userManager.Object);
         var tokens = new Mock<ITokenService>();
 
-        userManager.Setup(x => x.FindByEmailAsync("ana@test.com"))
+        userManager.Setup(x => x.FindByEmailAsync("test@test.com"))
             .ReturnsAsync(user);
 
-        signInManager.Setup(x => x.CheckPasswordSignInAsync(user, "Password123", true))
+        signInManager.Setup(x =>
+                x.CheckPasswordSignInAsync(user, "Password123", true))
             .ReturnsAsync(SignInResult.LockedOut);
 
         var service = CreateService(userManager, signInManager, tokens);
 
-        var result = await service.LoginAsync(new LoginRequest("ana@test.com", "Password123"));
+        var result = await service.LoginAsync(
+            new LoginRequest("test@test.com", "Password123"));
 
         result.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
     }

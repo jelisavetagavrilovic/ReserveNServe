@@ -10,6 +10,10 @@ namespace Identity.API.Tests;
 
 public class TokenServiceTests
 {
+    private const string TestUserId = "u1";
+    private const string TestEmail = "test@test";
+    private const string TestFullName = "Test User";
+
     private static AppIdentityDbContext CreateDbContext(string dbName)
     {
         var options = new DbContextOptionsBuilder<AppIdentityDbContext>()
@@ -35,15 +39,23 @@ public class TokenServiceTests
             .Build();
     }
 
+    private static ApplicationUser CreateTestUser()
+        => new()
+        {
+            Id = TestUserId,
+            Email = TestEmail,
+            UserName = TestEmail,
+            FullName = TestFullName
+        };
+
     [Fact]
     public async Task CreateRefreshTokenAsync_ShouldSaveToken()
     {
         using var db = CreateDbContext(nameof(CreateRefreshTokenAsync_ShouldSaveToken));
         var config = CreateConfiguration();
         var userManager = TestHelpers.CreateUserManagerMock();
-
         var service = new TokenService(config, userManager.Object, db);
-        var user = new ApplicationUser { Id = "u1", Email = "ana@test.com" };
+        var user = CreateTestUser();
 
         var (entity, plainToken) = await service.CreateRefreshTokenAsync(user);
 
@@ -51,7 +63,7 @@ public class TokenServiceTests
         entity.TokenHash.Should().NotBeNullOrWhiteSpace();
 
         var saved = await db.RefreshTokens.SingleAsync();
-        saved.UserId.Should().Be("u1");
+        saved.UserId.Should().Be(TestUserId);
     }
 
     [Fact]
@@ -60,7 +72,6 @@ public class TokenServiceTests
         using var db = CreateDbContext(nameof(RevokeRefreshTokenAsync_ShouldReturnFalse_WhenTokenDoesNotExist));
         var config = CreateConfiguration();
         var userManager = TestHelpers.CreateUserManagerMock();
-
         var service = new TokenService(config, userManager.Object, db);
 
         var result = await service.RevokeRefreshTokenAsync("missing-token");
@@ -79,7 +90,7 @@ public class TokenServiceTests
             new RefreshToken
             {
                 Id = Guid.NewGuid(),
-                UserId = "u1",
+                UserId = TestUserId,
                 TokenHash = "hash1",
                 CreatedAtUtc = DateTime.UtcNow,
                 ExpiresAtUtc = DateTime.UtcNow.AddDays(1)
@@ -87,7 +98,7 @@ public class TokenServiceTests
             new RefreshToken
             {
                 Id = Guid.NewGuid(),
-                UserId = "u1",
+                UserId = TestUserId,
                 TokenHash = "hash2",
                 CreatedAtUtc = DateTime.UtcNow,
                 ExpiresAtUtc = DateTime.UtcNow.AddDays(1)
@@ -97,7 +108,7 @@ public class TokenServiceTests
 
         var service = new TokenService(config, userManager.Object, db);
 
-        var count = await service.RevokeAllRefreshTokensForUserAsync("u1");
+        var count = await service.RevokeAllRefreshTokensForUserAsync(TestUserId);
 
         count.Should().Be(2);
     }
@@ -108,16 +119,11 @@ public class TokenServiceTests
         using var db = CreateDbContext(nameof(RefreshAsync_ShouldReturnNull_WhenTokenIsExpired));
         var config = CreateConfiguration();
         var userManager = TestHelpers.CreateUserManagerMock();
-
-        var user = new ApplicationUser
-        {
-            Id = "u1",
-            Email = "ana@test.com"
-        };
+        var user = CreateTestUser();
 
         db.Users.Add(user);
 
-        var expiredToken = new RefreshToken
+        db.RefreshTokens.Add(new RefreshToken
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
@@ -125,9 +131,8 @@ public class TokenServiceTests
             TokenHash = TestHelpers.ComputeHashForTest("expired-token"),
             CreatedAtUtc = DateTime.UtcNow.AddDays(-20),
             ExpiresAtUtc = DateTime.UtcNow.AddDays(-1)
-        };
+        });
 
-        db.RefreshTokens.Add(expiredToken);
         await db.SaveChangesAsync();
 
         var service = new TokenService(config, userManager.Object, db);
@@ -143,12 +148,7 @@ public class TokenServiceTests
         using var db = CreateDbContext(nameof(RefreshAsync_ShouldRevokeAllTokens_WhenRevokedTokenIsReused));
         var config = CreateConfiguration();
         var userManager = TestHelpers.CreateUserManagerMock();
-
-        var user = new ApplicationUser
-        {
-            Id = "u1",
-            Email = "ana@test.com"
-        };
+        var user = CreateTestUser();
 
         db.Users.Add(user);
 
@@ -182,7 +182,10 @@ public class TokenServiceTests
 
         result.Should().BeNull();
 
-        var userTokens = await db.RefreshTokens.Where(t => t.UserId == user.Id).ToListAsync();
+        var userTokens = await db.RefreshTokens
+            .Where(t => t.UserId == TestUserId)
+            .ToListAsync();
+
         userTokens.Should().OnlyContain(t => t.RevokedAtUtc != null);
     }
 }
