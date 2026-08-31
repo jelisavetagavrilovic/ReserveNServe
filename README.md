@@ -97,10 +97,10 @@ ReserveNServe/
 │       │   │   └── README.md
 │       │   ├── Payment/
 │       │   │   └── README.md
-│       │   └── Notifications/
-│       │       └── README.md
-│       │
-│       ├── Tests/
+│       │   ├── Notifications/
+│       │   |   └── README.md
+│       │   └── Tests/
+│       | 
 │       ├── scripts/
 │       ├── compose.yaml
 │       ├── .env.example
