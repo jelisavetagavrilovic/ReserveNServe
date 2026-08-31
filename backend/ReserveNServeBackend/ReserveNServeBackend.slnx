@@ -26,7 +26,7 @@
         <Project Path="Services/Restaurants/Restaurants.API.Tests/Restaurants.API.Tests.csproj" Id="48c168c7-946e-49ef-97d2-941b2c3a29a7" />
         <Project Path="Services/Payment/Payment.API.Tests/Payment.API.Tests.csproj" Id="83475daf-812f-4bc2-8c94-df62be1381e9" />
         <Project Path="Services/Reservations/Reservations.API.Tests/Reservations.API.Tests.csproj" />
-        <Project Path="Tests/ReserveNServe.E2E.Tests/ReserveNServe.E2E.Tests.csproj" />
+        <Project Path="Services/Tests/ReserveNServe.E2E.Tests/ReserveNServe.E2E.Tests.csproj" />
     </Folder>
     <Folder Name="/Solution Items/">
     <File Path="compose.yaml" />
