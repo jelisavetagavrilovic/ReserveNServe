@@ -23,14 +23,31 @@
   rabbitmq:
     image: rabbitmq:4-management
     container_name: reservenserve-rabbitmq
+    user: root
+
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-reservenserve-local-dev-cookie}
+
     ports:
       - "5672:5672"
       - "15672:15672"
+
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+
+    entrypoint:
+      - /bin/bash
+      - -ec
+      - |
+        mkdir -p /var/lib/rabbitmq
+        printf '%s' "$$RABBITMQ_ERLANG_COOKIE" > /var/lib/rabbitmq/.erlang.cookie
+        chown -R rabbitmq:rabbitmq /var/lib/rabbitmq
+        chmod 700 /var/lib/rabbitmq
+        chmod 600 /var/lib/rabbitmq/.erlang.cookie
+        exec /usr/local/bin/docker-entrypoint.sh rabbitmq-server
+
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
