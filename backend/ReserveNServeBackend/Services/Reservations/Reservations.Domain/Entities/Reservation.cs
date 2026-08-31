@@ -13,6 +13,8 @@ public class Reservation
     public Guid Id { get; set; }
 
     public Guid UserId { get; private set; }
+    
+    public string ContactEmail { get; private set; } = string.Empty;
 
     public int RestaurantId { get; private set; }
 
@@ -54,6 +56,7 @@ public class Reservation
     /// </summary>
     public Reservation(
         Guid userId,
+        string contactEmail,
         int restaurantId,
         int tableGroupId,
         DateTime startTime,
@@ -62,35 +65,32 @@ public class Reservation
         TimeSpan? servingTime)
     {
         if (userId == Guid.Empty)
-            throw new ArgumentException(
-                "User ID cannot be empty.",
-                nameof(userId));
+            throw new ArgumentException("User ID cannot be empty.", nameof(userId));
+
+        if (string.IsNullOrWhiteSpace(contactEmail))
+            throw new ArgumentException("Contact email cannot be empty.", nameof(contactEmail));
 
         if (restaurantId <= 0)
-            throw new ArgumentOutOfRangeException(
-                nameof(restaurantId));
+            throw new ArgumentOutOfRangeException(nameof(restaurantId));
 
         if (tableGroupId <= 0)
-            throw new ArgumentOutOfRangeException(
-                nameof(tableGroupId));
+            throw new ArgumentOutOfRangeException(nameof(tableGroupId));
 
         if (guestNumber <= 0)
-            throw new ArgumentOutOfRangeException(
-                nameof(guestNumber));
+            throw new ArgumentOutOfRangeException(nameof(guestNumber));
 
         if (endTime <= startTime)
-            throw new ArgumentException(
-                "Reservation end time must be after start time.");
+            throw new ArgumentException("Reservation end time must be after start time.");
 
         UserId = userId;
+        ContactEmail = contactEmail;
         RestaurantId = restaurantId;
         TableGroupId = tableGroupId;
         StartTime = startTime;
         EndTime = endTime;
         GuestNumber = guestNumber;
 
-        DurationMinutes =
-            (int)(endTime - startTime).TotalMinutes;
+        DurationMinutes = (int)(endTime - startTime).TotalMinutes;
 
         SetServingTime(servingTime);
     }
@@ -150,17 +150,6 @@ public class Reservation
     /// Cancels the reservation.
     /// Refund processing is coordinated by the Application layer.
     /// </summary>
-    // public void Cancel()
-    // {
-    //     if (!CanBeCancelled())
-    //     {
-    //         throw new InvalidOperationException(
-    //             "Reservation cannot be cancelled.");
-    //     }
-    //
-    //     Status = ReservationStatus.Cancelled;
-    // }
-    
     public void Cancel()
     {
         if (Status != ReservationStatus.Confirmed)

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservation cancelled</title>
+</head>
+
+<body style="margin:0; padding:0; background-color:#FBF8F5; font-family:Arial, Helvetica, sans-serif; color:#1E1311;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FBF8F5; padding:32px 16px;">
+    <tr>
+        <td align="center">
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                   style="max-width:620px; background-color:#ffffff; border:1px solid #E3DDD8; border-radius:10px; overflow:hidden;">
+
+                <tr>
+                    <td style="background-color:#B8492E; padding:24px 32px;">
+                        <h1 style="margin:0; font-family:Georgia, 'Times New Roman', serif; font-size:22px; font-weight:500; color:#FBF8F5;">
+                            ReserveNServe
+                        </h1>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:32px;">
+
+                        <h2 style="margin:0 0 8px; font-size:24px; color:#1E1311;">
+                            Reservation cancelled
+                        </h2>
+
+                        <p style="margin:0 0 28px; color:#423E3E; font-size:15px; line-height:1.6;">
+                            Your reservation has been successfully cancelled.
+                        </p>
+
+                        <div style="background-color:#F0EAE5; border-radius:8px; padding:18px 20px; margin-bottom:24px;">
+                            <div style="font-family:Georgia, 'Times New Roman', serif; font-size:20px; font-weight:bold; color:#1E1311;">
+                                {{ restaurant_name | html.escape }}
+                            </div>
+
+                            <div style="margin-top:5px; font-size:14px; color:#423E3E;">
+                                {{ restaurant_address | html.escape }}, {{ restaurant_city | html.escape }}
+                            </div>
+                        </div>
+
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                            <tr>
+                                <td style="padding:10px 0; color:#423E3E;">Date</td>
+                                <td align="right" style="padding:10px 0; font-weight:bold;">{{ date }}</td>
+                            </tr>
+
+                            <tr>
+                                <td style="padding:10px 0; color:#423E3E;">Time</td>
+                                <td align="right" style="padding:10px 0; font-weight:bold;">{{ start_time }}</td>
+                            </tr>
+
+                            <tr>
+                                <td style="padding:10px 0; color:#423E3E;">Guests</td>
+                                <td align="right" style="padding:10px 0;">{{ guest_number }}</td>
+                            </tr>
+
+                            <tr>
+                                <td style="padding:10px 0; color:#423E3E;">Table</td>
+                                <td align="right" style="padding:10px 0;">{{ table_location | html.escape }}</td>
+                            </tr>
+                        </table>
+
+                        {{ if refund_expected }}
+
+                        <div style="margin-top:28px; background-color:#F0EAE5; border-radius:8px; padding:18px 20px;">
+                            <div style="font-size:15px; font-weight:bold; color:#1E1311;">
+                                Refund is being processed
+                            </div>
+
+                            <div style="margin-top:6px; font-size:13px; line-height:1.6; color:#423E3E;">
+                                Your reservation included a paid food order.
+                                The refund has been requested and is currently being processed.
+                                We'll send you another email once the refund is completed.
+                            </div>
+
+                            <div style="margin-top:12px; font-size:14px; font-weight:bold; color:#B8492E;">
+                                Amount: {{ total_amount | math.format "0.00" }} RSD
+                            </div>
+                        </div>
+
+                        {{ end }}
+
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:20px 32px; background-color:#F0EAE5; border-top:1px solid #E3DDD8;">
+                        <p style="margin:0; font-size:12px; color:#423E3E;">
+                            Reservation ID: {{ reservation_id }}
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
+</body>
+</html>

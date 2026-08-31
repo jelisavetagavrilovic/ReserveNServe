@@ -3,6 +3,11 @@
 // application services, middleware, and API endpoints.
 
 using System;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Reservations.Application.Interfaces;
 using Reservations.Application.Services;
@@ -14,6 +19,7 @@ using System.Text.Json.Serialization;
 using RestaurantContracts = global::ReserveNServe.Contracts.Restaurants;
 using PaymentContracts = global::ReserveNServe.Contracts.Payment;
 using Reservations.Infrastructure.Messaging;
+using MassTransit;
 
 using DotNetEnv;
 
@@ -40,6 +46,28 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
+});
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is missing.");
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience is missing.");
+var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is missing.");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    options.MapInboundClaims = false;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = jwtIssuer,
+        ValidateAudience = true,
+        ValidAudience = jwtAudience,
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.FromMinutes(1),
+        NameClaimType = JwtRegisteredClaimNames.Sub,
+        RoleClaimType = ClaimTypes.Role
+    };
 });
 
 builder.Services.AddAuthorization();
@@ -79,6 +107,19 @@ builder.Services.AddScoped<IRestaurantClient, RestaurantClient>();
 builder.Services.AddScoped<IPaymentClient, PaymentClient>();
 builder.Services.AddHostedService<PaymentStatusChangedConsumer>();
 builder.Services.AddScoped<INotificationClient, NotificationClient>();
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        var rabbit = builder.Configuration.GetSection("RabbitMq");
+
+        cfg.Host(rabbit["Host"] ?? "rabbitmq", h =>
+        {
+            h.Username(rabbit["Username"] ?? "guest");
+            h.Password(rabbit["Password"]!);
+        });
+    });
+});
 
 
 var app = builder.Build();
@@ -107,7 +148,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors("Frontend");
+app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers();  
+app.MapControllers();
 
 app.Run();

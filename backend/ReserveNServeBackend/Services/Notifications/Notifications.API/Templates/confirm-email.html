@@ -5,47 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirm your email</title>
 </head>
-<body style="margin:0; padding:0; background-color:#f4f4f5; font-family:Arial, Helvetica, sans-serif; color:#18181b;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5; padding:24px 0;">
-        <tr>
-            <td align="center">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background-color:#ffffff; border-radius:8px; overflow:hidden;">
-                    <tr>
-                        <td style="background-color:#e11d48; padding:24px 32px;">
-                            <h1 style="margin:0; font-size:20px; color:#ffffff;">ReserveNServe</h1>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding:32px;">
-                            <h2 style="margin:0 0 16px; font-size:22px;">Confirm your email</h2>
-                            <p style="margin:0 0 16px; font-size:15px; line-height:1.6; color:#3f3f46;">
-                                Welcome to ReserveNServe! Please confirm your email address to activate your account.
-                            </p>
-                            <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
-                                <tr>
-                                    <td style="border-radius:6px; background-color:#e11d48;">
-                                        <a href="{{ confirm_url | html.escape }}" style="display:inline-block; padding:12px 28px; font-size:15px; color:#ffffff; text-decoration:none; font-weight:bold;">Confirm email</a>
-                                    </td>
-                                </tr>
-                            </table>
-                            <p style="margin:0 0 8px; font-size:13px; line-height:1.6; color:#71717a;">
+
+<body style="margin:0; padding:0; background-color:#FBF8F5; font-family:Arial, Helvetica, sans-serif; color:#1E1311;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FBF8F5; padding:32px 16px;">
+    <tr>
+        <td align="center">
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                   style="max-width:620px; background-color:#ffffff; border:1px solid #E3DDD8; border-radius:10px; overflow:hidden;">
+
+                <tr>
+                    <td style="background-color:#B8492E; padding:24px 32px;">
+                        <h1 style="margin:0; font-family:Georgia, 'Times New Roman', serif; font-size:22px; font-weight:500; color:#FBF8F5;">
+                            ReserveNServe
+                        </h1>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:32px;">
+
+                        <h2 style="margin:0 0 8px; font-size:24px; color:#1E1311;">
+                            Confirm your email
+                        </h2>
+
+                        <p style="margin:0 0 24px; color:#423E3E; font-size:15px; line-height:1.6;">
+                            Welcome to ReserveNServe! Please confirm your email address to activate your account.
+                        </p>
+
+                        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+                            <tr>
+                                <td style="background-color:#B8492E; border-radius:6px;">
+                                    <a href="{{ confirm_url | html.escape }}"
+                                       style="display:inline-block; padding:12px 26px; color:#FBF8F5; font-size:14px; font-weight:bold; text-decoration:none;">
+                                        Confirm email
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div style="margin-top:24px; background-color:#F0EAE5; border-radius:8px; padding:16px 18px;">
+                            <p style="margin:0 0 8px; font-size:13px; line-height:1.6; color:#423E3E;">
                                 If the button does not work, copy and paste this link into your browser:
                             </p>
+
                             <p style="margin:0; font-size:13px; line-height:1.6; word-break:break-all;">
-                                <a href="{{ confirm_url | html.escape }}" style="color:#e11d48;">{{ confirm_url | html.escape }}</a>
+                                <a href="{{ confirm_url | html.escape }}"
+                                   style="color:#B8492E; text-decoration:none;">
+                                    {{ confirm_url | html.escape }}
+                                </a>
                             </p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding:24px 32px; background-color:#fafafa; border-top:1px solid #e4e4e7;">
-                            <p style="margin:0; font-size:12px; color:#a1a1aa;">
-                                You received this email because an account was created with this address. If this was not you, you can ignore this message.
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
+                        </div>
+
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:20px 32px; background-color:#F0EAE5; border-top:1px solid #E3DDD8;">
+                        <p style="margin:0; font-size:12px; color:#423E3E;">
+                            You received this email because an account was created with this address.
+                            If this was not you, you can ignore this message.
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
 </body>
 </html>

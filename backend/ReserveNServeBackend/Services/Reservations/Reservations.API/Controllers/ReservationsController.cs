@@ -10,16 +10,16 @@ using Microsoft.AspNetCore.Mvc;
 using Reservations.Application.DTOs.Requests;
 using Reservations.Application.DTOs.Responses;
 using Reservations.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Reservations.API.Controllers;
 
 [ApiController]
 [Route("api/reservations")]
+[Authorize]
 public class ReservationsController : ControllerBase
 {
-    private static readonly Guid DevelopmentUserId =
-        Guid.Parse("11111111-1111-1111-1111-111111111111");
-
     private readonly IReservationService _reservationService;
 
     public ReservationsController(
@@ -38,11 +38,10 @@ public class ReservationsController : ControllerBase
             [FromBody] CreateReservationRequest request)
     {
         var userId = GetCurrentUserId();
+        var email = GetCurrentUserEmail();
 
-        var result =
-            await _reservationService.CreateReservationAsync(
-                userId,
-                request);
+        var result = await _reservationService.CreateReservationAsync(
+            userId, email, request);
 
         return CreatedAtAction(
             nameof(GetReservation),
@@ -171,6 +170,7 @@ public class ReservationsController : ControllerBase
     /// Returns available reservation time slots
     /// for the selected restaurant, date and guest number.
     /// </summary>
+    [AllowAnonymous]
     [HttpGet("availability/slots")]
     public async Task<ActionResult<List<AvailableSlotResponse>>>
         GetAvailableSlots(
@@ -192,6 +192,7 @@ public class ReservationsController : ControllerBase
     /// Returns table groups and their current availability
     /// for the selected restaurant, date and time.
     /// </summary>
+    [AllowAnonymous]
     [HttpGet("availability/tables")]
     public async Task<ActionResult<List<AvailableTableResponse>>>
         GetAvailableTables(
@@ -212,14 +213,30 @@ public class ReservationsController : ControllerBase
 
 
     /// <summary>
-    /// Returns the currently authenticated user ID.
-    ///
-    /// Development implementation only.
-    /// This will later be replaced with the authenticated user's
-    /// ID from JWT claims.
+    /// Returns the ID of the currently authenticated user
+    /// from the JWT claim.
     /// </summary>
     private Guid GetCurrentUserId()
     {
-        return DevelopmentUserId;
+        var value = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+
+        if (!Guid.TryParse(value, out var userId))
+            throw new UnauthorizedAccessException("Authenticated user ID is missing or invalid.");
+
+        return userId;
+    }
+    
+    /// <summary>
+    /// Returns the email address of the currently authenticated user
+    /// from the JWT email claim.
+    /// </summary>
+    private string GetCurrentUserEmail()
+    {
+        var email = User.FindFirst(JwtRegisteredClaimNames.Email)?.Value;
+
+        if (string.IsNullOrWhiteSpace(email))
+            throw new UnauthorizedAccessException("Authenticated user email is missing.");
+
+        return email;
     }
 }

@@ -19,11 +19,13 @@
       </PackageReference>
 
       <PackageReference Include="RabbitMQ.Client" Version="7.2.2" />
+      <PackageReference Include="MassTransit" Version="8.5.10" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Reservations.Application\Reservations.Application.csproj" />
       <ProjectReference Include="..\Reservations.Domain\Reservations.Domain.csproj" />
+      <ProjectReference Include="..\..\..\BuildingBlocks\Contracts\Contracts.csproj" />
     </ItemGroup>
 
     <ItemGroup>
