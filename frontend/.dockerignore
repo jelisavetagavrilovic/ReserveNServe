@@ -1,0 +1,41 @@
+# Dependencies
+node_modules
+
+# Next.js build output
+.next
+out
+
+# Test output
+coverage
+
+# Environment files
+.env
+.env.*
+!.env.local.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Git
+.git
+.gitignore
+
+# Editor and operating-system files
+.DS_Store
+.vscode
+.idea
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Deployment output
+.vercel
+
+# Docker and documentation files
+Dockerfile
+.dockerignore
+README.md

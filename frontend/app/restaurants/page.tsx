@@ -1,6 +1,17 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation"
 
 import Loading from "@/components/loading"
 import { RestaurantCard } from "@/components/restaurant-card"
@@ -21,13 +32,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  SlidersHorizontal,
 } from "lucide-react"
 
-import type {
-  Restaurant,
-  RestaurantQueryRequest,
-} from "@/lib/types/restaurant.types"
+import type { Restaurant } from "@/lib/types/restaurant.types"
 
 import {
   getRestaurantFilters,
@@ -36,19 +43,71 @@ import {
 
 import { useAppStore } from "@/lib/store"
 
-export default function RestaurantsPage() {
+type RestaurantSort = "rating" | "name"
+
+interface RestaurantUrlState {
+  search: string
+  cuisineType: string
+  price: string
+  sortBy: RestaurantSort
+  page: number
+}
+
+function readUrlState(searchParams: {
+  get: (name: string) => string | null
+}): RestaurantUrlState {
+  const requestedPage = Number(searchParams.get("page"))
+  const requestedSort = searchParams.get("sortBy")
+
+  return {
+    search: searchParams.get("search") ?? "",
+    cuisineType: searchParams.get("cuisineType") ?? "all",
+    price: searchParams.get("price") ?? "all",
+    sortBy: requestedSort === "name" ? "name" : "rating",
+    page:
+      Number.isInteger(requestedPage) && requestedPage > 0
+        ? requestedPage
+        : 1,
+  }
+}
+
+function RestaurantsPageContent() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  /*
+   * These are the filters currently applied to the results.
+   * They always come from the URL.
+   */
+  const appliedFilters = useMemo(
+    () => readUrlState(searchParams),
+    [searchParams]
+  )
+
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [cuisines, setCuisines] = useState<string[]>([])
   const [rangePrices, setRangePrices] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [hasSearched, setHasSearched] = useState(false)
-
-  const [searchQuery, setSearchQuery] = useState("")
-  const [cuisineFilter, setCuisineFilter] = useState("all")
-  const [priceFilter, setPriceFilter] = useState("all")
-  const [sortBy, setSortBy] = useState<"rating" | "name">("rating")
-  const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+
+  /*
+   * These values represent what the user is currently typing/selecting.
+   * They become applied filters after clicking Apply Filters.
+   */
+  const [searchQuery, setSearchQuery] = useState(
+    appliedFilters.search
+  )
+  const [cuisineFilter, setCuisineFilter] = useState(
+    appliedFilters.cuisineType
+  )
+  const [priceFilter, setPriceFilter] = useState(
+    appliedFilters.price
+  )
+  const [sortBy, setSortBy] = useState<RestaurantSort>(
+    appliedFilters.sortBy
+  )
 
   const {
     setSelectedTable,
@@ -57,72 +116,146 @@ export default function RestaurantsPage() {
     setCurrentReservationResponse,
   } = useAppStore()
 
-  const handleSearch = useCallback(
-    async (params?: RestaurantQueryRequest) => {
+  /**
+   * Creates a clean URL.
+   * Default values are omitted from the query string.
+   */
+  const navigateToFilters = useCallback(
+    (filters: RestaurantUrlState) => {
+      const params = new URLSearchParams()
+      const normalizedSearch = filters.search.trim()
+
+      if (normalizedSearch) {
+        params.set("search", normalizedSearch)
+      }
+
+      if (filters.cuisineType !== "all") {
+        params.set("cuisineType", filters.cuisineType)
+      }
+
+      if (filters.price !== "all") {
+        params.set("price", filters.price)
+      }
+
+      if (filters.sortBy !== "rating") {
+        params.set("sortBy", filters.sortBy)
+      }
+
+      if (filters.page > 1) {
+        params.set("page", String(filters.page))
+      }
+
+      const queryString = params.toString()
+      const url = queryString
+        ? `${pathname}?${queryString}`
+        : pathname
+
+      router.push(url)
+    },
+    [pathname, router]
+  )
+
+  /*
+   * Load filter options and reset an unfinished reservation
+   * when the restaurant listing is opened.
+   */
+  useEffect(() => {
+    setSelectedTable(null)
+    clearCart()
+    setCurrentReservationRequest(null)
+    setCurrentReservationResponse(null)
+
+    const loadFilters = async () => {
+      try {
+        const filters = await getRestaurantFilters()
+
+        setCuisines(filters.cuisines)
+        setRangePrices(filters.rangePrices)
+      } catch (error) {
+        console.error("Failed to load restaurant filters:", error)
+      }
+    }
+
+    void loadFilters()
+  }, [
+    clearCart,
+    setCurrentReservationRequest,
+    setCurrentReservationResponse,
+    setSelectedTable,
+  ])
+
+  /*
+   * Synchronize the form with the URL when the user uses
+   * browser Back or Forward.
+   */
+  useEffect(() => {
+    setSearchQuery(appliedFilters.search)
+    setCuisineFilter(appliedFilters.cuisineType)
+    setPriceFilter(appliedFilters.price)
+    setSortBy(appliedFilters.sortBy)
+  }, [
+    appliedFilters.search,
+    appliedFilters.cuisineType,
+    appliedFilters.price,
+    appliedFilters.sortBy,
+  ])
+
+  /*
+   * Fetch restaurants whenever an applied URL parameter changes.
+   */
+  useEffect(() => {
+    let isActive = true
+
+    const loadRestaurants = async () => {
       setLoading(true)
       setHasSearched(true)
 
       try {
         const response = await getRestaurants({
-          search: params?.search ?? searchQuery,
-          cuisineType: params?.cuisineType ?? cuisineFilter,
-          price: params?.price ?? priceFilter,
-          sortBy: params?.sortBy ?? sortBy,
-          page: params?.page ?? page,
+          search: appliedFilters.search,
+          cuisineType: appliedFilters.cuisineType,
+          price: appliedFilters.price,
+          sortBy: appliedFilters.sortBy,
+          page: appliedFilters.page,
           pageSize: 12,
         })
 
+        if (!isActive) return
+
         setRestaurants(response.items)
-        setTotalPages(response.totalPages)
+        setTotalPages(Math.max(response.totalPages, 1))
+      } catch (error) {
+        if (!isActive) return
+
+        console.error("Failed to load restaurants:", error)
+        setRestaurants([])
+        setTotalPages(1)
       } finally {
-        setLoading(false)
+        if (isActive) {
+          setLoading(false)
+        }
       }
-    },
-    [
-      searchQuery,
-      cuisineFilter,
-      priceFilter,
-      sortBy,
-      page,
-    ]
-  )
-
-  useEffect(() => {
-    const init = async () => {
-      setSelectedTable(null)
-      clearCart()
-      setCurrentReservationRequest(null)
-      setCurrentReservationResponse(null)
-
-      setLoading(true)
-
-      const filters = await getRestaurantFilters()
-
-      setCuisines(filters.cuisines)
-      setRangePrices(filters.rangePrices)
-
-      await handleSearch({
-        sortBy: "rating",
-        page: 1,
-      })
     }
 
-    void init()
-  }, [])
+    void loadRestaurants()
 
-  useEffect(() => {
-    if (!hasSearched) return
-
-    void handleSearch()
-  }, [page])
+    return () => {
+      isActive = false
+    }
+  }, [
+    appliedFilters.search,
+    appliedFilters.cuisineType,
+    appliedFilters.price,
+    appliedFilters.sortBy,
+    appliedFilters.page,
+  ])
 
   const handleApplyFilters = () => {
-    if (page !== 1) {
-      setPage(1)
-      return
-    }
-
-    void handleSearch({
+    navigateToFilters({
+      search: searchQuery,
+      cuisineType: cuisineFilter,
+      price: priceFilter,
+      sortBy,
       page: 1,
     })
   }
@@ -131,27 +264,32 @@ export default function RestaurantsPage() {
     setSearchQuery("")
     setCuisineFilter("all")
     setPriceFilter("all")
+    setSortBy("rating")
 
-    if (page !== 1) {
-      setPage(1)
-
-      void handleSearch({
-        search: "",
-        cuisineType: "all",
-        price: "all",
-        sortBy,
-        page: 1,
-      })
-
-      return
-    }
-
-    void handleSearch({
+    navigateToFilters({
       search: "",
       cuisineType: "all",
       price: "all",
-      sortBy,
+      sortBy: "rating",
       page: 1,
+    })
+  }
+
+  const handlePreviousPage = () => {
+    if (appliedFilters.page <= 1) return
+
+    navigateToFilters({
+      ...appliedFilters,
+      page: appliedFilters.page - 1,
+    })
+  }
+
+  const handleNextPage = () => {
+    if (appliedFilters.page >= totalPages) return
+
+    navigateToFilters({
+      ...appliedFilters,
+      page: appliedFilters.page + 1,
     })
   }
 
@@ -184,7 +322,6 @@ export default function RestaurantsPage() {
             />
           </div>
 
-          {/* Filters */}
           <div className="flex flex-wrap gap-3">
             <Select
               value={cuisineFilter}
@@ -237,9 +374,7 @@ export default function RestaurantsPage() {
             <Select
               value={sortBy}
               onValueChange={(value) =>
-                setSortBy(
-                  value as "rating" | "name"
-                )
+                setSortBy(value as RestaurantSort)
               }
             >
               <SelectTrigger className="w-[145px] rounded-xl">
@@ -268,10 +403,8 @@ export default function RestaurantsPage() {
         </div>
       </div>
 
-      {/* Loading */}
       {loading && <Loading />}
 
-      {/* Results */}
       {!loading && restaurants.length > 0 && (
         <>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -283,7 +416,6 @@ export default function RestaurantsPage() {
             ))}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="mt-8 flex items-center justify-center gap-4">
               <Button
@@ -291,13 +423,9 @@ export default function RestaurantsPage() {
                 variant="outline"
                 size="icon"
                 className="rounded-xl"
-                disabled={page === 1}
-                onClick={() =>
-                  setPage(
-                    (previous) =>
-                      previous - 1
-                  )
-                }
+                disabled={appliedFilters.page <= 1}
+                onClick={handlePreviousPage}
+                aria-label="Previous page"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -305,7 +433,7 @@ export default function RestaurantsPage() {
               <span className="text-sm text-muted-foreground">
                 Page{" "}
                 <span className="font-medium text-foreground">
-                  {page}
+                  {appliedFilters.page}
                 </span>{" "}
                 of {totalPages}
               </span>
@@ -315,13 +443,11 @@ export default function RestaurantsPage() {
                 variant="outline"
                 size="icon"
                 className="rounded-xl"
-                disabled={page === totalPages}
-                onClick={() =>
-                  setPage(
-                    (previous) =>
-                      previous + 1
-                  )
+                disabled={
+                  appliedFilters.page >= totalPages
                 }
+                onClick={handleNextPage}
+                aria-label="Next page"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -330,7 +456,6 @@ export default function RestaurantsPage() {
         </>
       )}
 
-      {/* Empty state */}
       {!loading &&
         hasSearched &&
         restaurants.length === 0 && (
@@ -358,5 +483,19 @@ export default function RestaurantsPage() {
           </div>
         )}
     </PageContainer>
+  )
+}
+
+export default function RestaurantsPage() {
+  return (
+    <Suspense
+      fallback={
+        <PageContainer>
+          <Loading />
+        </PageContainer>
+      }
+    >
+      <RestaurantsPageContent />
+    </Suspense>
   )
 }
