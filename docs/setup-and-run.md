@@ -115,7 +115,7 @@ Trust the certificate when supported:
 dotnet dev-certs https --trust
 ```
 
-Identity.API and Notifications.API are exposed through HTTP in the current Compose setup. Restaurants.API, Reservations.API, and Payment.API expose both HTTP and HTTPS, while their internal gRPC listeners use HTTP/2 inside the Docker network.
+Identity.API and Notifications.API are exposed through HTTP in the current Compose setup. Restaurants.API, Reservations.API and Payment.API expose both HTTP and HTTPS, while their internal gRPC listeners use HTTP/2 inside the Docker network.
 
 ### 5. Verify frontend public URLs
 
@@ -126,8 +126,6 @@ NEXT_PUBLIC_IDENTITY_API_URL=http://localhost:5206
 NEXT_PUBLIC_RESTAURANTS_API_URL=https://localhost:7274
 NEXT_PUBLIC_RESERVATIONS_API_URL=https://localhost:7294
 ```
-
-The frontend image receives these values at build time. Rebuild the frontend after changing any `NEXT_PUBLIC_*` value. `NEXT_PUBLIC_PAYMENT_API_URL` is retained in the example environment for possible direct-payment tooling, but the current user flow starts payment through Reservations.API and does not require a browser call to Payment.API.
 
 ### 6. Build and start the stack
 
@@ -285,23 +283,6 @@ cd frontend
 npm run lint
 npm run build
 ```
-
-## Generate source-code documentation
-
-Install Doxygen and Graphviz, then run from the repository root:
-
-```bash
-chmod +x scripts/generate-source-docs.sh
-./scripts/generate-source-docs.sh
-```
-
-Open:
-
-```text
-docs/generated/doxygen/html/index.html
-```
-
-See [Source-code documentation](source-code.md) for configuration and maintenance guidance.
 
 ## Stop or rebuild
 

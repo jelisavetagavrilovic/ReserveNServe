@@ -10,15 +10,15 @@ The frontend provides the browser interface for authentication, restaurant disco
 
 ## 2. Responsibilities
 
-| Area                | Responsibilities                                                                                                                   |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Area                | Responsibilities                                                                                                                  |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | Authentication      | Registration, login, email confirmation, password reset, token handling and protected-page access                                 |
 | Restaurant browsing | Restaurant lists, details, menus, cuisines, locations, images and opening hours                                                   |
 | Reservations        | Availability search, table selection, reservation creation, confirmation, listing and cancellation                                |
-| Food pre-orders     | Menu display, cart management, and submission of selected items                                                                    |
+| Food pre-orders     | Menu display, cart management and submission of selected items                                                                    |
 | Payments            | Payment initialization through `Reservations.API`, Stripe Elements rendering, card confirmation and payment-status reconciliation |
-| Account management  | Viewing and updating account information                                                                                           |
-| Administration      | Processing restaurant-owner requests through protected administration pages                                                        |
+| Account management  | Viewing and updating account information                                                                                          |
+| Administration      | Processing restaurant-owner requests through protected administration pages                                                       |
 
 ## 3. Project Structure
 
@@ -56,16 +56,16 @@ frontend/
 └── .env.local.example
 ```
 
-| Path            | Responsibility                                               |
-| --------------- | ------------------------------------------------------------ |
-| `app/`          | Next.js App Router pages, layouts, and providers             |
+| Path            | Responsibility                                              |
+| --------------- | ----------------------------------------------------------- |
+| `app/`          | Next.js App Router pages, layouts and providers             |
 | `auth/`         | Authentication API client, service, store, hooks and models |
-| `components/`   | Reusable application and user-interface components           |
-| `lib/api/`      | Low-level backend API clients                                |
-| `lib/services/` | Frontend service functions used by pages and components      |
-| `lib/store.ts`  | Persisted reservation and cart workflow state                |
-| `lib/types/`    | Shared TypeScript models                                     |
-| `public/`       | Static assets                                                |
+| `components/`   | Reusable application and user-interface components          |
+| `lib/api/`      | Low-level backend API clients                               |
+| `lib/services/` | Frontend service functions used by pages and components     |
+| `lib/store.ts`  | Persisted reservation and cart workflow state               |
+| `lib/types/`    | Shared TypeScript models                                    |
+| `public/`       | Static assets                                               |
 
 ## 4. Main Routes
 
@@ -144,7 +144,7 @@ NEXT_PUBLIC_RESERVATIONS_API_URL=http://localhost:5040
 | `NEXT_PUBLIC_RESERVATIONS_API_URL`   | Base URL of `Reservations.API` |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable browser key |
 
-Variables whose names begin with `NEXT_PUBLIC_` are included in the browser bundle. Never store Stripe secret keys, database credentials, JWT signing keys, or other secrets in these variables.
+Variables whose names begin with `NEXT_PUBLIC_` are included in the browser bundle. Never store Stripe secret keys, database credentials, JWT signing keys or other secrets in these variables.
 
 When building the Docker image, these values are provided as build arguments through Docker Compose.
 
@@ -194,17 +194,17 @@ To stop the application without removing local data:
 docker compose down
 ```
 
-For environment setup, certificates, Stripe configuration, and troubleshooting, see the [Setup and Run Guide](../docs/setup-and-run.md).
+For environment setup, certificates, Stripe configuration and troubleshooting, see the [Setup and Run Guide](../docs/setup-and-run.md).
 
 ## 8. Communication with Other Services
 
 The frontend communicates with backend services through REST APIs and uses Stripe.js for browser-side card confirmation.
 
-| Component          | Mechanism          | Purpose                                                                                                  |
-| ------------------ | ------------------ | -------------------------------------------------------------------------------------------------------- |
-| `Identity.API`     | REST/JSON          | Registration, login, tokens, email confirmation, password reset, profile management, and administration  |
-| `Restaurants.API`  | REST/JSON          | Restaurant lists, details, menus, filters, opening hours, and table information                          |
+| Component          | Mechanism          | Purpose                                                                                                 |
+| ------------------ | ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `Identity.API`     | REST/JSON          | Registration, login, tokens, email confirmation, password reset, profile management and administration  |
+| `Restaurants.API`  | REST/JSON          | Restaurant lists, details, menus, filters, opening hours and table information                          |
 | `Reservations.API` | REST/JSON with JWT | Availability, reservations, pre-orders, cancellations, payment initialization and status reconciliation |
-| Stripe             | Stripe.js          | Card confirmation using the client secret returned through `Reservations.API`                            |
+| Stripe             | Stripe.js          | Card confirmation using the client secret returned through `Reservations.API`                           |
 
 The browser does not call `Payment.API`, `Notifications.API`, RabbitMQ or the databases directly. Business rules, persistence, payment processing and notification delivery remain in the backend services.
