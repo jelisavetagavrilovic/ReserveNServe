@@ -31,6 +31,32 @@ import type {
   PendingOwnerRequest,
 } from "@/auth/types/auth.types"
 
+const belgradeDateTimeFormatter =
+  new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Belgrade",
+    dateStyle: "medium",
+    timeStyle: "short",
+    hourCycle: "h23",
+  })
+
+function formatBelgradeTime(
+  utcDateTime: string
+): string {
+  const containsTimeZone =
+    /(?:Z|[+-]\d{2}:\d{2})$/i.test(utcDateTime)
+
+  const normalizedDateTime = containsTimeZone
+    ? utcDateTime
+    : `${utcDateTime}Z`
+
+  const date = new Date(normalizedDateTime)
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown date"
+  }
+
+  return belgradeDateTimeFormatter.format(date)
+}
 
 export default function OwnerRequestsPage() {
   const router = useRouter()
@@ -106,8 +132,6 @@ export default function OwnerRequestsPage() {
     router,
   ])
 
-
-
   const handleApprove = async (
     email: string
   ) => {
@@ -136,20 +160,17 @@ export default function OwnerRequestsPage() {
     }
   }
 
-
   if (
-  !isHydrated ||
-  !isAuthenticated ||
-  !user
+    !isHydrated ||
+    !isAuthenticated ||
+    !user
   ) {
     return <Loading />
   }
 
-
   if (!user.roles.includes("Admin")) {
     return <Loading />
   }
-
 
   return (
     <PageContainer>
@@ -181,60 +202,60 @@ export default function OwnerRequestsPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {requests.map((request) => (
-              <Card
-                key={request.email}
-                className="rounded-2xl border shadow-sm"
-              >
-                <CardHeader>
-                  <CardTitle className="text-base">
-                    {request.email}
-                  </CardTitle>
-                </CardHeader>
+            {requests.map((request) => {
+              const isApproving =
+                approvingEmail === request.email
 
-                <CardContent className="space-y-3">
-                  <div className="text-sm text-muted-foreground">
-                    <p>
-                      User: {request.userName}
-                    </p>
+              return (
+                <Card
+                  key={request.email}
+                  className="rounded-2xl border shadow-sm"
+                >
+                  <CardHeader>
+                    <CardTitle className="text-base">
+                      {request.email}
+                    </CardTitle>
+                  </CardHeader>
 
-                    <p>
-                      Requested at:{" "}
-                      {new Date(
-                        request.ownerRequestedAtUtc
-                      ).toLocaleString()}
-                    </p>
-                  </div>
+                  <CardContent className="space-y-3">
+                    <div className="text-sm text-muted-foreground">
+                      <p>
+                        User: {request.userName}
+                      </p>
 
-                  <Button
-                    type="button"
-                    className="rounded-xl"
-                    disabled={
-                      approvingEmail ===
-                      request.email
-                    }
-                    onClick={() =>
-                      handleApprove(
-                        request.email
-                      )
-                    }
-                  >
-                    {approvingEmail ===
-                    request.email ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Approving...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="mr-2 h-4 w-4" />
-                        Approve
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                      <p>
+                        Requested at:{" "}
+                        {formatBelgradeTime(
+                          request.ownerRequestedAtUtc
+                        )}{" "}
+                        (Belgrade time)
+                      </p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      className="rounded-xl"
+                      disabled={isApproving}
+                      onClick={() =>
+                        handleApprove(request.email)
+                      }
+                    >
+                      {isApproving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Approving...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="mr-2 h-4 w-4" />
+                          Approve
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
       </div>
