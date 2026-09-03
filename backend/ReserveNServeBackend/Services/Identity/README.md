@@ -1,42 +1,36 @@
 # Identity.API
 
-Identity.API is the authentication and authorization microservice of ReserveNServe. It owns user accounts, credentials, JWT access tokens, refresh tokens, roles, email verification, password recovery, and the RestaurantOwner approval workflow.
+Identity.API is the authentication and authorization microservice of ReserveNServe. It owns user accounts, credentials, JWT access tokens, refresh tokens, roles, email verification, password recovery and the RestaurantOwner approval workflow.
 
 ## 1. Purpose
 
-The service provides a single identity boundary for the platform. Other backend services validate JWTs issued by Identity.API instead of managing users themselves.
-
-Default Docker URL:
-
-```text
-http://localhost:5206
-```
+The service provides a single identity boundary for the platform. Other backend services validate JWTs issued by Identity.API instead of managing user credentials themselves.
 
 ## 2. Responsibilities
 
-- Register users.
-- Require email confirmation before login.
-- Authenticate users and issue JWT access tokens.
-- Create, rotate, revoke, and hash refresh tokens.
-- Support logout and logout-all-sessions.
-- Support forgot-password and reset-password flows.
-- Read and update the current user profile.
-- Manage `User`, `Admin`, and `RestaurantOwner` roles.
-- Accept RestaurantOwner requests and allow admins to approve them.
-- Publish identity-related notification events to RabbitMQ.
+* Register users
+* Require email confirmation before login
+* Authenticate users and issue JWT access tokens
+* Create, rotate, revoke and hash refresh tokens
+* Support logout and logout from all sessions
+* Support forgot-password and reset-password workflows
+* Read and update the current user profile
+* Manage `User`, `Admin` and `RestaurantOwner` roles
+* Process RestaurantOwner requests and administrator approval
+* Publish identity-related notification events to RabbitMQ
 
 ## 3. Project Structure
 
 ```text
 Services/Identity/
 ├── Identity.API/
-│   ├── Controllers/        # Auth, admin and owner-request HTTP endpoints
-│   ├── Data/               # DbContext, ApplicationUser and seeding
-│   ├── DTOs/               # API request/response models
-│   ├── Entities/           # RefreshToken
-│   ├── Extensions/         # DI and application configuration
-│   ├── Migrations/         # EF Core migrations
-│   ├── Services/           # Authentication, owner workflow and token logic
+│   ├── Controllers/        # Authentication, administration and owner requests
+│   ├── Data/               # DbContext, ApplicationUser and data seeding
+│   ├── DTOs/               # API request and response models
+│   ├── Entities/           # RefreshToken entity
+│   ├── Extensions/         # Dependency injection and application setup
+│   ├── Migrations/         # Entity Framework Core migrations
+│   ├── Services/           # Authentication, tokens and owner workflow
 │   ├── Program.cs
 │   ├── appsettings*.json
 │   └── Dockerfile
@@ -44,7 +38,7 @@ Services/Identity/
     └── Identity.API.Tests/
 ```
 
-Shared integration-event contracts are referenced from:
+Shared integration-event contracts are located in:
 
 ```text
 BuildingBlocks/Contracts
@@ -52,115 +46,74 @@ BuildingBlocks/Contracts
 
 ## 4. Main Endpoints
 
-| Method | Endpoint | Auth | Purpose |
-| --- | --- | --- | --- |
-| POST | `/api/auth/register` | No | Register a user |
-| POST | `/api/auth/login` | No | Login and receive access/refresh tokens |
-| POST | `/api/auth/refresh` | No | Rotate refresh token and issue a new token pair |
-| POST | `/api/auth/logout` | JWT | Revoke one refresh token |
-| POST | `/api/auth/logout-all` | JWT | Revoke all sessions |
-| GET | `/api/auth/me` | JWT | Get current user profile |
-| PUT | `/api/auth/me` | JWT | Update current user profile |
-| POST | `/api/auth/confirm-email` | No | Confirm email address |
-| POST | `/api/auth/forgot-password` | No | Start password reset |
-| POST | `/api/auth/reset-password` | No | Reset password |
-| POST | `/api/owners/requests` | JWT | Request RestaurantOwner role |
-| GET | `/api/owners/requests` | Admin | List pending owner requests |
-| POST | `/api/owners/requests/approve` | Admin | Approve an owner request |
-| GET | `/api/owners/ping` | Owner | Check owner authorization |
-| GET | `/api/admin/ping` | Admin | Check admin authorization |
+| Method | Endpoint                       | Authorization   | Purpose                                             |
+| ------ | ------------------------------ | --------------- | --------------------------------------------------- |
+| POST   | `/api/auth/register`           | Public          | Register a user                                     |
+| POST   | `/api/auth/login`              | Public          | Authenticate and receive access and refresh tokens  |
+| POST   | `/api/auth/refresh`            | Public          | Rotate the refresh token and issue a new token pair |
+| POST   | `/api/auth/logout`             | JWT             | Revoke one refresh token                            |
+| POST   | `/api/auth/logout-all`         | JWT             | Revoke all sessions for the current user            |
+| GET    | `/api/auth/me`                 | JWT             | Get the current user profile                        |
+| PUT    | `/api/auth/me`                 | JWT             | Update the current user profile                     |
+| POST   | `/api/auth/confirm-email`      | Public          | Confirm an email address                            |
+| POST   | `/api/auth/forgot-password`    | Public          | Start the password-reset workflow                   |
+| POST   | `/api/auth/reset-password`     | Public          | Reset a password                                    |
+| POST   | `/api/owners/requests`         | JWT             | Request the RestaurantOwner role                    |
+| GET    | `/api/owners/requests`         | Admin           | List pending owner requests                         |
+| POST   | `/api/owners/requests/approve` | Admin           | Approve or reject an owner request                  |
+| GET    | `/api/owners/ping`             | RestaurantOwner | Verify owner authorization                          |
+| GET    | `/api/admin/ping`              | Admin           | Verify administrator authorization                  |
 
-Swagger is available in Development mode at:
-
-```text
-http://localhost:5206/swagger
-```
+Swagger is available in the Development environment at `http://localhost:5206/swagger`.
 
 ## 5. Database
 
-Identity.API uses SQL Server with Entity Framework Core.
+Identity.API uses **SQL Server** with **Entity Framework Core**.
 
-Default database:
+The default database is:
 
 ```text
 ReserveNServe.Identity
 ```
 
-Main tables include the standard ASP.NET Identity tables:
+The database contains the standard ASP.NET Core Identity tables and the `RefreshTokens` table.
 
-```text
-AspNetUsers
-AspNetRoles
-AspNetUserRoles
-AspNetUserClaims
-AspNetRoleClaims
-AspNetUserLogins
-AspNetUserTokens
-RefreshTokens
-```
+`AspNetUsers` also stores ReserveNServe-specific fields such as:
 
-`AspNetUsers` also stores ReserveNServe-specific profile and owner-request fields such as `FullName`, `OwnerRequestPending`, and `OwnerRequestedAtUtc`.
+* `FullName`
+* `OwnerRequestPending`
+* `OwnerRequestedAtUtc`
 
-EF Core migrations are applied automatically when the service starts.
-
-Docker SQL Server is published on:
-
-```text
-localhost:1436
-```
+Entity Framework Core migrations are applied automatically when the service starts.
 
 ## 6. Configuration
 
-Important settings:
+| Setting                        | Environment variable            | Purpose                |
+| ------------------------------ | ------------------------------- | ---------------------- |
+| `ConnectionStrings:IdentityDb` | `ConnectionStrings__IdentityDb` | SQL Server connection  |
+| `Jwt:Issuer`                   | `Jwt__Issuer`                   | JWT issuer             |
+| `Jwt:Audience`                 | `Jwt__Audience`                 | JWT audience           |
+| `Jwt:Key`                      | `Jwt__Key`                      | JWT signing key        |
+| `Jwt:AccessTokenMinutes`       | `Jwt__AccessTokenMinutes`       | Access-token lifetime  |
+| `RefreshToken:ExpirationDays`  | `RefreshToken__ExpirationDays`  | Refresh-token lifetime |
+| `RabbitMq:Host`                | `RabbitMq__Host`                | RabbitMQ host          |
+| `RabbitMq:Username`            | `RabbitMq__Username`            | RabbitMQ username      |
+| `RabbitMq:Password`            | `RabbitMq__Password`            | RabbitMQ password      |
 
-| Setting | Environment variable | Purpose |
-| --- | --- | --- |
-| `ConnectionStrings:IdentityDb` | `ConnectionStrings__IdentityDb` | SQL Server connection |
-| `Jwt:Issuer` | `Jwt__Issuer` | JWT issuer |
-| `Jwt:Audience` | `Jwt__Audience` | JWT audience |
-| `Jwt:Key` | `Jwt__Key` | JWT signing key |
-| `Jwt:AccessTokenMinutes` | `Jwt__AccessTokenMinutes` | Access-token lifetime |
-| `RefreshToken:ExpirationDays` | `RefreshToken__ExpirationDays` | Refresh-token lifetime |
-| `RabbitMq:Host` | `RabbitMq__Host` | RabbitMQ host |
-| `RabbitMq:Username` | `RabbitMq__Username` | RabbitMQ username |
-| `RabbitMq:Password` | `RabbitMq__Password` | RabbitMQ password |
+The root `.env` file supplies the required values to Docker Compose.
 
-The root `.env` provides the shared JWT values:
-
-```dotenv
-JWT_ISSUER=ReserveNServe.Identity
-JWT_AUDIENCE=ReserveNServe.ApiClients
-JWT_KEY=<strong-development-key>
-MSSQL_SA_PASSWORD=<sql-server-password>
-```
-
-All services that validate ReserveNServe JWTs must use the same issuer, audience, and signing key.
+Identity.API, Reservations.API, and Payment.API must use the same JWT issuer, audience and signing key.
 
 ## 7. How to Run
 
-From the backend root:
+Configure the root `.env` file as described in the [Setup and Run Guide](../../../../docs/setup-and-run.md).
+
+From `backend/ReserveNServeBackend`, run:
 
 ```bash
-cd backend/ReserveNServeBackend
-cp .env.example .env
-```
-
-Fill in the required SQL Server and JWT values, then run:
-
-```bash
-docker compose up -d --build sqlserver rabbitmq identity-api
-```
-
-To include email confirmation/password-reset delivery during development:
-
-```bash
-docker compose up -d --build sqlserver rabbitmq mailpit notifications-api identity-api
-```
-
-Check the service:
-
-```text
-http://localhost:5206/swagger
+docker compose up -d --build \
+  sqlserver rabbitmq mailpit \
+  notifications-api identity-api
 ```
 
 For direct host development:
@@ -169,26 +122,26 @@ For direct host development:
 dotnet run --project Services/Identity/Identity.API/Identity.API.csproj
 ```
 
-When running on macOS/Linux, override the default LocalDB connection string with a reachable SQL Server connection.
+When using macOS or Linux, override the default LocalDB connection string with a reachable SQL Server connection.
 
 ## 8. Communication with Other Services
 
-```text
-Frontend
-   |
-   | REST / JWT
-   v
-Identity.API
-   |
-   | MassTransit / RabbitMQ events
-   v
-Notifications.API
-```
+| Direction | Component         | Mechanism                 | Purpose                                                             |
+| --------- | ----------------- | ------------------------- | ------------------------------------------------------------------- |
+| Inbound   | Frontend          | REST/JSON                 | Registration, authentication, profile and owner-request workflows  |
+| Outbound  | Notifications.API | RabbitMQ with MassTransit | Email confirmation, password reset and owner-request notifications |
 
-Identity.API publishes these notification events:
+Identity.API publishes the following integration events:
 
-- `UserRegistered` — email confirmation, including email changes.
-- `PasswordResetRequested` — password-reset email.
-- `OwnerRequestApproved` — RestaurantOwner approval notification.
+* `UserRegistered`
+* `PasswordResetRequested`
+* `OwnerRequestApproved`
 
-Identity.API does not call Restaurants, Reservations, or Payment directly. Instead, it issues JWTs that those services validate using the shared JWT configuration.
+Identity.API does not call Restaurants.API, Reservations.API or Payment.API directly. It issues JWTs that protected backend services validate using the shared JWT configuration.
+
+## Related Project Documentation
+
+* [Identity class diagram](../../../../docs/class-diagrams.md#identity-subsystem)
+* [Authentication architecture](../../../../docs/architecture.md#authentication-and-authorization)
+* [Identity API reference](../../../../docs/api-reference.md#identityapi)
+* [Source-code documentation](../../../../docs/source-code.md)
